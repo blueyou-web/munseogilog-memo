@@ -685,7 +685,7 @@
         );
     };
 
-    // // ====================================================================================
+    // // // // ====================================================================================
     // 🚀🚀🚀 여기가 수정된 PostItem 컴포넌트입니다 🚀🚀🚀
     // ====================================================================================
     const PostItem = ({ post, nestedLevel = 0, onThreadSelect, onRequestDelete, onEditPost, onNewPostAnimated, newPostId, posts, isMainTimeline = false, onToggleLike, onToggleBookmark, onRetweetAction, onReplyClick }) => {
@@ -697,14 +697,29 @@
 
         const originalPost = posts.find(p => p.id === post.retweetedPostId);
         const isRetweet = !!post.retweetedPostId;
+        // ✅ [수정] 'isSimpleRetweet' 정의를 사용하여 단순 리트윗과 인용 트윗을 명확히 구분합니다.
         const isSimpleRetweet = isRetweet && !post.content && !post.replyToId;
 
         const isAuthor = post.authorId === App.currentUserId;
         const MessageIcon = MessageSquare; 
         
-        const targetPostId = isRetweet && originalPost ? originalPost.id : post.id;
-        const isLiked = post.likes?.includes(App.currentUserId);
-        const isBookmarked = post.bookmarks?.includes(App.currentUserId);
+        // ===============================================================
+        // ✅ [핵심 수정 1] 상호작용의 대상을 결정하는 로직 변경
+        // ===============================================================
+        // '단순 리트윗'일 경우에만 원본 게시물을 타겟으로 하고,
+        // '인용 트윗'이나 '일반 트윗'은 게시물 자체를 타겟으로 합니다.
+        const targetPostId = isSimpleRetweet && originalPost ? originalPost.id : post.id;
+        
+        // ===============================================================
+        // ✅ [핵심 수정 2] '좋아요', '북마크' 상태를 어디서 가져올지 결정하는 로직 변경
+        // ===============================================================
+        // '단순 리트윗'일 경우에만 원본 게시물의 상태를 보여주고,
+        // '인용 트윗'이나 '일반 트윗'은 자체 상태를 보여줍니다.
+        const sourcePostForReactions = isSimpleRetweet && originalPost ? originalPost : post;
+
+        const isLiked = sourcePostForReactions.likes?.includes(App.currentUserId);
+        const isBookmarked = sourcePostForReactions.bookmarks?.includes(App.currentUserId);
+        // ===============================================================
         
         const retweetsCount = posts.filter(p => p.retweetedPostId === post.id).length;
         
@@ -760,26 +775,19 @@
         
         const visibleReplies = isReplyLimitActive 
             ? replies.slice(-2)
+            //? replies.slice(0, 2)
             : replies;
             
         const hiddenReplyCount = isReplyLimitActive ? replies.length - 2 : 0;
         
-        // ===============================================================
-        // ✅ [핵심 수정] 답글 렌더링 조건 로직 (깊이 1단계로 수정)
-        // ===============================================================
         const shouldRenderReplies = useMemo(() => {
             if (replies.length === 0) return false;
-
             if (isMainTimeline) {
-                // 메인 타임라인: 최상위 게시물(nestedLevel=0)의 답글만 렌더링
                 return nestedLevel === 0;
             } else {
-                // 스레드 뷰: 현재 게시물로부터 1단계 깊이까지만 렌더링 (직접적인 답글만)
-                // 즉, 현재 게시물의 nestedLevel이 0일 때만 그 자식(답글)들을 렌더링함
                 return nestedLevel < 1;
             }
         }, [replies.length, isMainTimeline, nestedLevel]);
-        // ===============================================================
         
         const animationClass = isFlashing ? 'animate-pulse-once dark:animate-dark-pulse-once bg-blue-50 dark:bg-blue-900/50' : '';
 
@@ -902,8 +910,8 @@
                                         />
                                     </div>
                                 )}
-
-                                {originalPost && isRetweet && post.content && <QuotedPost originalPost={originalPost} onThreadSelect={onThreadSelect} />}
+                                {/* 인용 트윗일 경우에만 인용된 원본 게시물을 보여줍니다. */}
+                                {originalPost && !isSimpleRetweet && <QuotedPost originalPost={originalPost} onThreadSelect={onThreadSelect} />}
                             </>
                         )}
                       </>
@@ -959,7 +967,7 @@
                             ? <span className="text-base">{isLiked ? '❤️' : '🤍'}</span> 
                             : <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} className={isLiked ? 'text-red-500' : ''} />
                         }
-                        <span>{post.likes?.length > 0 ? post.likes.length : ''}</span>
+                        <span>{sourcePostForReactions.likes?.length > 0 ? sourcePostForReactions.likes.length : ''}</span>
                     </button>
 
                     <button
