@@ -78,6 +78,8 @@
     const Image = Lucide.Image || '🖼️';
     const X = Lucide.X || '❌';
     const ArrowLeft = Lucide.ArrowLeft || '←'; // 팝업 닫기/돌아가기 버튼용 아이콘 추가
+    // 🔔 알림 아이콘 추가
+    const Bell = Lucide.Bell || '🔔';
 
     const hardcodedFirebaseConfig = {
         apiKey: "AIzaSyCx8xjwiyje_X5XS1YnYgZGtpDla6zQtE0",
@@ -89,8 +91,9 @@
         appId: "1:372609175973:web:4b9a33f82677f8621c184c"
     };
     
-    // const PROFILE_STORAGE_KEY = 'miniTwitterCustomProfiles';
     const ACTIVE_USER_STORAGE_KEY = 'miniTwitterActiveUser';
+    // 🔔 알림 확인 시간 저장을 위한 키 추가
+    const LAST_CHECKED_NOTIFICATIONS_KEY = 'miniTwitterLastCheckedNotifications';
 
     let firebaseConfig, initialAuthToken, canvasAppId;
     
@@ -112,16 +115,6 @@
             // setDoc 함수를 추가합니다.
             getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, deleteDoc, updateDoc, getDoc, setDoc } = window.firebase || {};
 
-    // 로컬 스토리지에서 프로필을 가져오는 함수는 이제 사용하지 않습니다.
-    // const getInitialCustomProfile = () => {
-    //     try {
-    //         const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
-    //         return stored ? JSON.parse(stored) : {};
-    //     } catch (error) {
-    //         console.error("Error loading profile from localStorage:", error);
-    //         return {};
-    //     }
-    // };
     const getInitialActiveUser = () => localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
     
     const MOCK_GROUPS = [
@@ -148,11 +141,27 @@
     
     const EXAMPLE_IMAGE_URL = 'https://i.imgur.com/PPzkDE7.png';
     
+    // 🔔 VIEW_OPTIONS에 '알림' 탭 추가
     const VIEW_OPTIONS = [
         { id: 'timeline', name: '타임라인', icon: Home, emptyMessage: '아직 게시물이 없습니다. 첫 번째 트윗을 작성해 보세요!' },
+        { id: 'notifications', name: '알림', icon: Bell, emptyMessage: '아직 받은 알림이 없습니다.' },
         { id: 'likes', name: '좋아요', icon: Heart, emptyMessage: '좋아요를 누른 게시물이 없습니다.' },
         { id: 'bookmarks', name: '북마크', icon: Bookmark, emptyMessage: '북마크한 게시물이 없습니다.' },
     ];
+
+    // 🔔 멘션을 파싱하고 스타일링하는 헬퍼 함수 추가
+    const renderContentWithMentions = (content) => {
+        if (!content) return '';
+        const mentionRegex = /@([a-zA-Z0-9_]+)/g;
+        const parts = content.split(mentionRegex);
+
+        return parts.map((part, index) => {
+            if (index % 2 === 1) { 
+                return <span key={index} className="text-blue-500 font-semibold">@{part}</span>;
+            }
+            return part; 
+        });
+    };
 
     const ProfilePictureDisplay = ({ profile, sizeClass = 'w-10 h-10', textSizeClass = 'text-lg', isSmall = false }) => {
         const hasImage = profile.profileImageUrl && profile.profileImageUrl.startsWith('http');
@@ -160,8 +169,6 @@
         const handleImageError = (e, profile) => {
             e.target.style.display = 'none'; 
             const parentDiv = e.target.parentElement;
-            // 여기서 profile.color를 직접 사용합니다.
-            // 버튼 배경에 사용되는 color 클래스 형식을 파싱합니다.
             const colorClass = profile.color.split('-').slice(1, 3).join('-');
             const colorMap = {
                 'blue-500': '#3b82f6', 'blue-400': '#60a5fa',
@@ -171,37 +178,22 @@
                 'gray-300': '#d1d5db',
                 'gray-500': '#6b7280',
             };
-            // 버튼 배경색 대신 이미지 오류 시 에러 색상 또는 mock color를 사용하도록 합니다.
-            // 프로필 선택 버튼의 경우, 배경이 user.color 클래스로 이미 칠해져 있으므로, 
-            // 이미지 오류 시 배경색을 임의로 설정하는 대신 이모지를 직접 표시합니다.
             
-            // 프로필 선택 버튼에서 사용되는 ProfilePictureDisplay의 경우 (isSmall=true), 
-            // 배경색이 button에 적용되어 있어 ProfilePictureDisplay는 투명하게 렌더링되어야 합니다.
-            // 하지만, 이모지 백업 로직을 위해 mock user의 color를 전달받아 사용합니다.
-            const bgColorClass = hasImage ? 'bg-transparent' : profile.color;
-
-
-            // ProfilePictureDisplay를 버튼 내부에서 사용할 때, 
-            // 배경색은 버튼 자체에 적용되므로, 여기서는 글자색만 조정합니다.
             if (isSmall) {
-                // 버튼 내부에서 사용될 때는 배경색을 투명하게 설정하고 텍스트만 표시합니다.
                  parentDiv.classList.add('bg-transparent');
                  parentDiv.innerHTML = `<span class="text-white ${textSizeClass}">${profile.profile}</span>`;
                  return;
             }
 
-            // 일반 타임라인/헤더에서 사용될 때 (isSmall=false)
             parentDiv.style.backgroundColor = colorMap[colorClass] || '#ccc'; 
             parentDiv.classList.remove('overflow-hidden');
             parentDiv.innerHTML = `<span class="${textSizeClass}">${profile.profile}</span>`; 
         };
 
-        // isSmall일 경우, 버튼 내부에서 사용되므로 배경색을 투명하게 하고 글자색을 하얗게 합니다.
         const defaultStyleClass = isSmall ? 'bg-transparent' : profile.color;
         
         return (
             <div 
-                // isSmall이 true일 경우, 배경색이 버튼에 이미 적용되어 있으므로 bg-transparent를 사용합니다.
                 className={`rounded-full flex items-center justify-center flex-shrink-0 ${sizeClass} ${hasImage ? 'overflow-hidden bg-transparent' : defaultStyleClass}`}
             >
                 {hasImage ? (
@@ -209,11 +201,9 @@
                         src={profile.profileImageUrl} 
                         alt={`${profile.name} profile`} 
                         className="w-full h-full object-cover"
-                        // isSmall일 때, 이미지 로드 실패 시 흰색 텍스트가 보이도록 profile 객체에 mock user의 profile을 전달해야 합니다.
                         onError={(e) => handleImageError(e, profile)}
                     />
                 ) : (
-                    // isSmall일 경우, 버튼의 배경색에 맞춰 흰색 텍스트를 사용합니다.
                     <span className={`${textSizeClass} ${isSmall ? 'text-white' : ''}`}>{profile.profile}</span>
                 )}
             </div>
@@ -222,8 +212,8 @@
 
     const QuoteTweetModal = ({ post, onQuoteSubmit, onCancel, currentUserProfile, currentUserId }) => {
         const [content, setContent] = useState('');
-        const [imageUrl, setImageUrl] = useState(''); // 🖼️ 이미지 URL 상태 추가
-        const [showImageInput, setShowImageInput] = useState(false); // 🖼️ 이미지 입력 필드 토글 상태 추가
+        const [imageUrl, setImageUrl] = useState('');
+        const [showImageInput, setShowImageInput] = useState(false);
         const textareaRef = useRef(null);
 
         useEffect(() => {
@@ -237,7 +227,6 @@
         
         const handleQuotePost = (e) => {
             e.preventDefault();
-            // 🖼️ onQuoteSubmit에 이미지 URL 전달
             onQuoteSubmit(content, post.id, imageUrl.trim()); 
         };
         
@@ -262,7 +251,6 @@
                             />
                         </div>
                         
-                        {/* 🖼️ 이미지 입력 필드와 버튼 */}
                         <div className="flex items-center justify-between mb-4 mt-2">
                             <button
                                 type="button"
@@ -295,7 +283,6 @@
                                 />
                             </div>
                         )}
-                        {/* 🖼️ 첨부 이미지 미리보기 */}
                         {imageUrl && (
                             <div className="mb-4 max-h-40 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
                                 <img src={imageUrl} alt="미리보기" className="w-full object-cover" />
@@ -303,7 +290,6 @@
                         )}
 
 
-                        {/* Quoted Post 렌더링 (간소화 버전) */}
                         <div className="mt-2 p-3 border border-gray-200 dark:border-gray-700 rounded-xl max-h-40 overflow-hidden relative">
                             <p className="font-semibold text-sm text-gray-800 dark:text-gray-200 truncate">@{post.authorHandle}</p>
                             <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap line-clamp-3">{post.content}</p>
@@ -332,9 +318,9 @@
         );
     };
 
- // 💡 ReplyModal (모바일 대응 수정 완료)
     const ReplyModal = ({ post, onReply, onCancel, currentUserProfile, currentUserId }) => {
-        const [replyContent, setReplyContent] = useState('');
+        // 🔔 답글 편의성: 자동으로 원본 작성자를 멘션하도록 초기값 설정
+        const [replyContent, setReplyContent] = useState(`@${post.authorHandle} `);
         const [imageUrl, setImageUrl] = useState('');
         const [showImageInput, setShowImageInput] = useState(false);
         const textareaRef = useRef(null); 
@@ -343,9 +329,12 @@
             if (textareaRef.current) {
                 textareaRef.current.style.height = 'auto'; 
                 textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-                textareaRef.current.focus(); 
+                textareaRef.current.focus();
+                // 커서를 멘션 뒤로 이동
+                const len = textareaRef.current.value.length;
+                textareaRef.current.setSelectionRange(len, len);
             }
-        }, [replyContent]);
+        }, []); // 최초 렌더링 시에만 실행
         
         const formProfile = currentUserProfile || { 
             profile: '👤', 
@@ -364,37 +353,24 @@
         
         const handleReplySubmit = (e) => {
             e.preventDefault();
-            // 답글 작성 시, replyToId는 원본 게시물 ID인 post.id를 사용
             onReply(replyContent, post.id, null, imageUrl.trim()); 
-            onCancel(); // 답글 제출 후 모달 닫기
+            onCancel();
         };
 
         return (
-            // ✅ 수정된 모바일 최적화 컨테이너:
-            // p-0: 모바일에서 패딩 제거
-            // sm:p-4: 데스크톱/태블릿에서는 패딩 유지
-            // items-start: 모바일에서는 상단 정렬 (키보드 대응에 유리)
-            // sm:items-center: 데스크톱/태블릿에서는 중앙 정렬
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start sm:items-center justify-center z-50 p-0 sm:p-4">
-                {/* ✅ 수정된 모달 본체: 
-                    rounded-none sm:rounded-xl: 모바일에서는 각진 모서리, 데스크톱/태블릿에서는 둥근 모서리
-                    max-h-full sm:max-h-[90vh]: 모바일에서는 최대 높이 확보, 데스크톱/태블릿에서는 90vh 제한
-                */}
                 <div className="bg-white dark:bg-gray-800 rounded-none sm:rounded-xl shadow-2xl w-full max-w-md transform transition-all overflow-y-auto max-h-full sm:max-h-[90vh]">
-                    {/* 모달 헤더 (sticky 유지) */}
                     <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center p-3 z-10">
                         <button 
                             onClick={onCancel} 
                             className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                         >
-                            {/* 닫기 버튼을 ArrowLeft로 사용 (트위터 UI 유사) */}
                             {typeof ArrowLeft === 'string' ? <span className="text-xl text-gray-700 dark:text-gray-300">{ArrowLeft}</span> : <ArrowLeft size={20} className="text-gray-700 dark:text-gray-300" />}
                         </button>
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white ml-4">답글 작성</h3>
                     </div>
 
                     <div className="p-4">
-                        {/* 원본 트윗 미리보기 (답글을 달려는 트윗) */}
                         <div className="flex items-start mb-4 border-b border-gray-100 dark:border-gray-700 pb-4">
                             <div className="mr-3 flex-shrink-0">
                                 <ProfilePictureDisplay profile={postProfile} sizeClass="w-8 h-8" textSizeClass="text-sm" />
@@ -404,7 +380,8 @@
                                     <span className="font-bold dark:text-white">{post.authorName}</span>
                                     <span className="text-gray-500 dark:text-gray-400">@{post.authorHandle}</span>
                                 </div>
-                                <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{post.content}</p>
+                                {/* 🔔 멘션 렌더링 함수 적용 */}
+                                <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{renderContentWithMentions(post.content)}</p>
                                 
                                 {post.imageUrl && (
                                     <div className="mt-2 max-h-32 overflow-hidden rounded-xl">
@@ -412,15 +389,12 @@
                                     </div>
                                 )}
 
-                                {/* 답글 대상 표시 */}
                                 <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
                                     <span className="text-blue-500">@{post.authorHandle}</span>님에게 답글 중
                                 </p>
                             </div>
                         </div>
 
-
-                        {/* 답글 입력 폼 */}
                         <form onSubmit={handleReplySubmit} className="flex flex-col">
                             <div className="flex items-start">
                                 <div className="mr-3 flex-shrink-0 pt-1">
@@ -438,7 +412,6 @@
                                 />
                             </div>
                             
-                            {/* 이미지 첨부 영역 */}
                             <div className="flex flex-col pl-12 pt-2">
                                 <div className="flex items-center justify-between mt-1">
                                     <button
@@ -511,7 +484,6 @@
               <div className="border-l-4 border-red-300 pl-3 py-2 mb-6 bg-red-50 dark:bg-gray-800 rounded-md">
                 <p className="font-semibold text-gray-800 dark:text-gray-200">@{post.authorHandle}의 게시물:</p>
                 <p className="text-sm italic text-gray-600 dark:text-gray-400 mt-1 max-h-24 overflow-hidden whitespace-pre-wrap">{post.content}</p>
-                {/* 🖼️ 이미지 미리보기 (삭제 확인용) */}
                 {post.imageUrl && (
                     <div className="mt-2 max-h-20 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
                         <img src={post.imageUrl} alt="첨부 이미지" className="w-full object-cover" />
@@ -562,10 +534,7 @@
                     <div className="flex flex-col items-center mb-6">
                         <div className="w-20 h-20 rounded-full flex items-center justify-center text-4xl mb-3">
                             <ProfilePictureDisplay 
-                                profile={{ 
-                                    ...profile, 
-                                    profileImageUrl: profileImageUrl,
-                                }} 
+                                profile={{ ...profile, profileImageUrl: profileImageUrl }} 
                                 sizeClass="w-20 h-20"
                                 textSizeClass="text-4xl"
                             />
@@ -670,8 +639,8 @@
                     <span className="font-bold text-xs dark:text-white">{originalPost.authorName}</span>
                     <span className="text-gray-500 dark:text-gray-400 text-xs">@{originalPost.authorHandle}</span>
                 </div>
-                <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap line-clamp-3">{originalPost.content}</p>
-                 {/* 🖼️ 인용된 트윗의 이미지 표시 */}
+                {/* 🔔 멘션 렌더링 함수 적용 */}
+                <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap line-clamp-3">{renderContentWithMentions(originalPost.content)}</p>
                 {originalPost.imageUrl && (
                     <div className="mt-2 max-h-40 overflow-hidden rounded-xl">
                         <img 
@@ -685,9 +654,6 @@
         );
     };
 
-    // // // //     // ====================================================================================
-    // 🚀🚀🚀 여기가 수정된 PostItem 컴포넌트입니다 🚀🚀🚀
-    // ====================================================================================
     const PostItem = ({ post, nestedLevel = 0, onThreadSelect, onRequestDelete, onEditPost, onNewPostAnimated, newPostId, posts, isMainTimeline = false, onToggleLike, onToggleBookmark, onRetweetAction, onReplyClick }) => {
         const [isEditing, setIsEditing] = useState(false); 
         const [editContent, setEditContent] = useState(post.content); 
@@ -697,29 +663,17 @@
 
         const originalPost = posts.find(p => p.id === post.retweetedPostId);
         const isRetweet = !!post.retweetedPostId;
-        // ✅ [수정] 'isSimpleRetweet' 정의를 사용하여 단순 리트윗과 인용 트윗을 명확히 구분합니다.
         const isSimpleRetweet = isRetweet && !post.content && !post.replyToId;
 
         const isAuthor = post.authorId === App.currentUserId;
         const MessageIcon = MessageSquare; 
         
-        // ===============================================================
-        // ✅ [핵심 수정 1] 상호작용의 대상을 결정하는 로직 변경
-        // ===============================================================
-        // '단순 리트윗'일 경우에만 원본 게시물을 타겟으로 하고,
-        // '인용 트윗'이나 '일반 트윗'은 게시물 자체를 타겟으로 합니다.
         const targetPostId = isSimpleRetweet && originalPost ? originalPost.id : post.id;
         
-        // ===============================================================
-        // ✅ [핵심 수정 2] '좋아요', '북마크' 상태를 어디서 가져올지 결정하는 로직 변경
-        // ===============================================================
-        // '단순 리트윗'일 경우에만 원본 게시물의 상태를 보여주고,
-        // '인용 트윗'이나 '일반 트윗'은 자체 상태를 보여줍니다.
         const sourcePostForReactions = isSimpleRetweet && originalPost ? originalPost : post;
 
         const isLiked = sourcePostForReactions.likes?.includes(App.currentUserId);
         const isBookmarked = sourcePostForReactions.bookmarks?.includes(App.currentUserId);
-        // ===============================================================
         
         const retweetsCount = posts.filter(p => p.retweetedPostId === post.id).length;
         
@@ -775,7 +729,6 @@
         
         const visibleReplies = isReplyLimitActive 
             ? replies.slice(-2)
-            //? replies.slice(0, 2)
             : replies;
             
         const hiddenReplyCount = isReplyLimitActive ? replies.length - 2 : 0;
@@ -894,11 +847,12 @@
                       </div>
                   ) : (
                       <>
+                        {/* 🔔 멘션 렌더링 함수 적용 */}
                         {isSimpleRetweet && originalPost ? (
-                            <p className="mt-1 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{originalPost.content}</p>
+                            <p className="mt-1 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{renderContentWithMentions(originalPost.content)}</p>
                         ) : (
                             <>
-                                <p className="mt-1 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{post.content}</p>
+                                <p className="mt-1 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{renderContentWithMentions(post.content)}</p>
                                 
                                 {post.imageUrl && !isSimpleRetweet && (
                                     <div className="mt-3 max-h-96 overflow-hidden rounded-xl">
@@ -910,7 +864,6 @@
                                         />
                                     </div>
                                 )}
-                                {/* 인용 트윗일 경우에만 인용된 원본 게시물을 보여줍니다. */}
                                 {originalPost && !isSimpleRetweet && <QuotedPost originalPost={originalPost} onThreadSelect={onThreadSelect} />}
                             </>
                         )}
@@ -1019,14 +972,11 @@
           </div>
         );
     };
-    // ====================================================================================
-    // 🚀🚀🚀 PostItem 컴포넌트 수정 완료 🚀🚀🚀
-    // ======================================================================
 
     const ReplyForm = ({ parentId, onReply, isMainPost = false, currentUserProfile, currentUserId }) => {
         const [replyContent, setReplyContent] = useState('');
-        const [imageUrl, setImageUrl] = useState(''); // 🖼️ 이미지 URL 상태 추가
-        const [showImageInput, setShowImageInput] = useState(false); // 🖼️ 이미지 입력 필드 토글 상태 추가
+        const [imageUrl, setImageUrl] = useState('');
+        const [showImageInput, setShowImageInput] = useState(false);
         const textareaRef = useRef(null); 
         
         useEffect(() => {
@@ -1045,11 +995,10 @@
         
         const handleReplySubmit = (e) => {
             e.preventDefault();
-            // 🖼️ onReply에 이미지 URL 전달
             onReply(replyContent, parentId, null, imageUrl.trim()); 
             setReplyContent('');
-            setImageUrl(''); // 전송 후 초기화
-            setShowImageInput(false); // 전송 후 숨김
+            setImageUrl('');
+            setShowImageInput(false);
         };
 
         if (!currentUserId && !isMainPost) return null; 
@@ -1072,9 +1021,7 @@
                 />
             </div>
 
-            {/* 🖼️ 이미지 첨부 영역 */}
             <div className="flex flex-col pl-11 pt-2">
-                {/* 이미지 입력 필드 토글 */}
                 <div className="flex items-center justify-between mt-1">
                     <button
                         type="button"
@@ -1104,7 +1051,6 @@
                         />
                     </div>
                 )}
-                {/* 첨부 이미지 미리보기 */}
                 {imageUrl && (
                     <div className="mb-2 max-h-40 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 relative">
                         <img 
@@ -1150,6 +1096,8 @@ const App = () => {
         const [activeView, setActiveView] = useState('timeline'); 
         const [postToRetweet, setPostToRetweet] = useState(null); 
         const [replyToPost, setReplyToPost] = useState(null); 
+        // 🔔 알림 관련 state 추가
+        const [lastCheckedNotifications, setLastCheckedNotifications] = useState(null);
         
         const { getDoc, doc, onSnapshot, setDoc, collection } = window.firebase || {};
 
@@ -1157,6 +1105,18 @@ const App = () => {
             MOCK_USERS.find(user => user.uid === currentUserId), 
             [currentUserId]
         );
+
+        // 🔔 멘션 처리를 위해 사용자의 아이디(handle)와 uid를 매핑하는 객체 생성
+        const handleToUidMap = useMemo(() => {
+            const map = {};
+            MOCK_USERS.forEach(user => {
+                const customProfile = allCustomProfiles[user.uid];
+                // 커스텀 핸들이 있으면 그것을, 없으면 기본 핸들을 사용
+                const handle = customProfile?.handle || user.handle;
+                map[handle] = user.uid;
+            });
+            return map;
+        }, [allCustomProfiles]);
 
         const currentUserProfile = useMemo(() => {
             if (!mockUserProfile) return null;
@@ -1334,6 +1294,13 @@ const App = () => {
             return () => unsubscribe();
         }, [db, isLoading]);
 
+        // 🔔 알림 확인 시간을 LocalStorage에서 불러오는 로직 (사용자별로 관리)
+        useEffect(() => {
+            if (currentUserId) {
+                const storedTime = localStorage.getItem(`${LAST_CHECKED_NOTIFICATIONS_KEY}_${currentUserId}`);
+                setLastCheckedNotifications(storedTime ? new Date(parseInt(storedTime)) : new Date(0));
+            }
+        }, [currentUserId]);
 
         useEffect(() => {
             if (!db || isLoading) return;
@@ -1349,6 +1316,7 @@ const App = () => {
                     bookmarks: doc.data().bookmarks || [], 
                     retweetedPostId: doc.data().retweetedPostId || null,
                     imageUrl: doc.data().imageUrl || null,
+                    mentions: doc.data().mentions || [], // 🔔 Firestore에서 mentions 필드를 가져오도록 추가
                 }));
                 
                 const sortedPosts = fetchedPosts.sort((a, b) => {
@@ -1380,6 +1348,17 @@ const App = () => {
             const postingProfile = currentUserProfile || { 
                 uid: currentUserId, name: "Anonymous User", handle: "anonymous", color: "bg-gray-500", profile: "👤", profileImageUrl: '' 
             };
+            
+            // 🔔 멘션 파싱 로직 추가
+            const mentionRegex = /@([a-zA-Z0-9_]+)/g;
+            const mentions = new Set(); // 중복 멘션 방지를 위해 Set 사용
+            let match;
+            while ((match = mentionRegex.exec(content)) !== null) {
+                const handle = match[1];
+                if (handleToUidMap[handle]) { // 유효한 사용자인지 확인
+                    mentions.add(handleToUidMap[handle]);
+                }
+            }
             
             let rootPostId = null;
             if (replyToId) {
@@ -1416,7 +1395,8 @@ const App = () => {
                     imageUrl: imageUrl && imageUrl.startsWith('http') ? imageUrl : null,
                     timestamp: serverTimestamp(),
                     likes: [], 
-                    bookmarks: [], 
+                    bookmarks: [],
+                    mentions: Array.from(mentions), // 🔔 멘션된 사용자 uid 배열을 Firestore에 저장
                 });
                 
                 if (replyToId && rootPostId) {
@@ -1429,7 +1409,7 @@ const App = () => {
             } catch (e) {
                 console.error("게시 실패:", e);
             }
-        }, [db, currentUserId, currentUserProfile, getDoc]);
+        }, [db, currentUserId, currentUserProfile, getDoc, handleToUidMap]);
         App.handlePost = handlePost;
         
         const handleRetweetAction = useCallback(async (targetPost, actionType) => {
@@ -1553,6 +1533,20 @@ const App = () => {
         }, [db, currentUserId]);
 
 
+        // 🔔 멘션된 게시물과 안 읽은 멘션 수 계산 로직 추가
+        const mentionPosts = useMemo(() => {
+            if (!currentUserId) return [];
+            return posts
+                .filter(p => p.mentions?.includes(currentUserId))
+                .sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()); // 최신순 정렬
+        }, [posts, currentUserId]);
+
+        const unreadMentionCount = useMemo(() => {
+            if (!lastCheckedNotifications) return 0;
+            return mentionPosts.filter(p => p.timestamp > lastCheckedNotifications).length;
+        }, [mentionPosts, lastCheckedNotifications]);
+
+
         const displayPosts = useMemo(() => {
             if (selectedPostIdForThread) return []; 
             const rootPosts = posts.filter(p => !p.replyToId);
@@ -1564,8 +1558,12 @@ const App = () => {
                 if (!currentUserId) return [];
                 return rootPosts.filter(p => p.bookmarks?.includes(currentUserId) && !p.retweetedPostId);
             }
+            // 🔔 '알림' 탭이 선택되었을 때 멘션된 게시물 목록을 보여주도록 추가
+            if (activeView === 'notifications') {
+                return mentionPosts;
+            }
             return rootPosts;
-        }, [posts, currentUserId, activeView, selectedPostIdForThread]);
+        }, [posts, currentUserId, activeView, selectedPostIdForThread, mentionPosts]);
         
         const currentViewData = VIEW_OPTIONS.find(v => v.id === activeView);
         const LoaderIcon = Loader; 
@@ -1580,30 +1578,21 @@ const App = () => {
             );
         }
 
-        // ===============================================================
-        // ✅ [핵심 수정] 스레드 뷰의 '뒤로가기' 로직을 처리하기 위한 부분
-        // ===============================================================
         const selectedPost = posts.find(p => p.id === selectedPostIdForThread);
         
-        // 현재 선택된 게시물에 부모 게시물(답글 대상)이 있는지 확인합니다.
         const hasParentPost = selectedPost && selectedPost.replyToId;
 
-        // 뒤로가기 버튼에 표시될 텍스트를 결정합니다.
         const backButtonText = hasParentPost
             ? '← 이전 게시물로 돌아가기'
             : `← ${currentViewData.name}로 돌아가기`;
 
-        // 뒤로가기 버튼 클릭 시 실행될 함수입니다.
         const handleThreadBackClick = () => {
             if (hasParentPost) {
-                // 부모 게시물이 있으면 부모 게시물의 스레드를 보여줍니다.
                 setSelectedPostIdForThread(selectedPost.replyToId);
             } else {
-                // 부모 게시물이 없으면(최상위 글) 타임라인으로 돌아갑니다.
                 setSelectedPostIdForThread(null);
             }
         };
-        // ===============================================================
 
         const currentProfileDisplay = currentUserProfile || { name: '로그아웃됨', handle: 'guest', profile: '?', color: 'bg-gray-500', profileImageUrl: '' };
 
@@ -1776,7 +1765,13 @@ const App = () => {
                                     key={view.id}
                                     onClick={() => {
                                         setActiveView(view.id);
-                                        setSelectedPostIdForThread(null); 
+                                        setSelectedPostIdForThread(null);
+                                        // 🔔 '알림' 탭을 클릭하면, 현재 시간을 "마지막으로 확인한 시간"으로 기록
+                                        if (view.id === 'notifications' && currentUserId) {
+                                            const now = new Date().getTime();
+                                            localStorage.setItem(`${LAST_CHECKED_NOTIFICATIONS_KEY}_${currentUserId}`, now);
+                                            setLastCheckedNotifications(new Date(now));
+                                        }
                                     }}
                                     className={`py-3 flex-1 text-sm font-semibold transition relative
                                         ${activeView === view.id 
@@ -1788,6 +1783,10 @@ const App = () => {
                                     disabled={!currentUserId && view.id !== 'timeline'}
                                 >
                                     {view.name}
+                                    {/* 🔔 안 읽은 알림이 있을 경우 빨간 점 표시 */}
+                                    {view.id === 'notifications' && unreadMentionCount > 0 && (
+                                        <span className="absolute top-2 right-1/4 w-2 h-2 bg-red-500 rounded-full"></span>
+                                    )}
                                     {activeView === view.id && (
                                         <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 h-1 w-1/3 bg-blue-500 rounded-full"></div>
                                     )}
@@ -1811,7 +1810,6 @@ const App = () => {
                     <main>
                       {selectedPostIdForThread ? (
                         <div className="p-4">
-                            {/* ✅ [핵심 수정] 버튼의 onClick과 텍스트를 위에서 정의한 변수로 교체 */}
                             <button 
                                 onClick={handleThreadBackClick}
                                 className="text-sm text-blue-500 hover:text-blue-600 font-semibold mb-4 p-2 rounded-lg bg-blue-50 dark:bg-gray-700 transition"
@@ -1903,7 +1901,6 @@ const App = () => {
         );
     };
 
-    // React 애플리케이션 렌더링
     const container = document.getElementById('root');
     const root = ReactDOM.createRoot(container);
     root.render(<App />);
@@ -1911,3 +1908,4 @@ const App = () => {
 
 </body>
 </html>
+}
