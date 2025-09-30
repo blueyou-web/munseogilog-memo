@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>트위터 SNS (React + Firestore)</title>
+    <title>Tistory Twitter</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -132,17 +132,18 @@
         { id: 'financ', name: '이 팀', icon: 'E' },
     ];
     const MOCK_USERS = [
-        { uid: 'user-001', name: '유저 1', handle: 'codemaster', color: 'bg-blue-500', profile: '1', group: 'dev' },
-        { uid: 'user-009', name: '유저 2', handle: 'codemaster', color: 'bg-blue-500', profile: '2', group: 'dev' },
-        { uid: 'user-002', name: '유저 3', handle: 'frontend_guy', color: 'bg-blue-400', profile: '3', group: 'dev' },
-        { uid: 'user-003', name: '유저 4', handle: 'designer_j', color: 'bg-pink-500', profile: '4', group: 'design' },
-        { uid: 'user-004', name: '유저 5', handle: 'ux_pro', color: 'bg-pink-400', profile: '5', group: 'design' },
-        { uid: 'user-005', name: '유저 6', handle: 'creativity', color: 'bg-indigo-500', profile: '6', group: 'marketing' },
-        { uid: 'user-006', name: '유저 7', handle: 'ad_genius', color: 'bg-indigo-400', profile: '7', group: 'marketing' },
-        { uid: 'user-007', name: '유저 8', handle: 'analystk', color: 'bg-green-500', profile: '8', group: 'finance' },
-        { uid: 'user-008', name: '유저 9', handle: 'finance_p', color: 'bg-green-400', profile: '9', group: 'finance' },
-        { uid: 'user-010', name: '유저 10', handle: 'finance_p', color: 'bg-green-400', profile: '10', group: 'financ' },
-        { uid: 'user-011', name: '유저 11', handle: 'finance_p', color: 'bg-green-400', profile: '11', group: 'financ' },
+        { uid: 'user-001', name: '유저 1', handle: 'user1', color: 'bg-blue-500', profile: '1', group: 'dev' },
+        { uid: 'user-009', name: '유저 2', handle: 'user2', color: 'bg-blue-500', profile: '2', group: 'dev' },
+        { uid: 'user-002', name: '유저 3', handle: 'user3', color: 'bg-blue-400', profile: '3', group: 'dev' },
+        { uid: 'user-003', name: '유저 4', handle: 'user4', color: 'bg-pink-500', profile: '4', group: 'design' },
+        { uid: 'user-004', name: '유저 5', handle: 'user5', color: 'bg-pink-400', profile: '5', group: 'design' },
+        { uid: 'user-005', name: '유저 6', handle: 'user6', color: 'bg-indigo-500', profile: '6', group: 'marketing' },
+        { uid: 'user-006', name: '유저 7', handle: 'user7', color: 'bg-indigo-400', profile: '7', group: 'marketing' },
+        { uid: 'user-007', name: '유저 8', handle: 'user8', color: 'bg-green-500', profile: '8', group: 'finance' },
+        { uid: 'user-008', name: '유저 9', handle: 'user9', color: 'bg-green-400', profile: '9', group: 'finance' },
+        { uid: 'user-010', name: '유저 10', handle: 'user10', color: 'bg-green-400', profile: '10', group: 'financ' },
+        { uid: 'user-011', name: '유저 11', handle: 'user11', color: 'bg-green-400', profile: '11', group: 'financ' },
+        { uid: 'user-012', name: '유저 12', handle: 'user12', color: 'bg-green-400', profile: '12', group: 'dev' },
     ];
     
     const EXAMPLE_IMAGE_URL = 'https://i.imgur.com/PPzkDE7.png';
@@ -684,33 +685,29 @@
         );
     };
 
-    // 💡 PostItem 수정: showReplyForm 제거 및 onReplyClick prop 추가
-    const PostItem = ({ post, nestedLevel = 0, onThreadSelect, onRequestDelete, onEditPost, onNewPostAnimated, newPostId, posts, isMainTimeline = false, onToggleLike, onToggleBookmark, onRetweetAction, onReplyClick }) => { // 💡 onReplyClick prop 추가
-        // const [showReplyForm, setShowReplyForm] = useState(false); // 💡 삭제: 인라인 폼 제거
+    // // ====================================================================================
+    // 🚀🚀🚀 여기가 수정된 PostItem 컴포넌트입니다 🚀🚀🚀
+    // ====================================================================================
+    const PostItem = ({ post, nestedLevel = 0, onThreadSelect, onRequestDelete, onEditPost, onNewPostAnimated, newPostId, posts, isMainTimeline = false, onToggleLike, onToggleBookmark, onRetweetAction, onReplyClick }) => {
         const [isEditing, setIsEditing] = useState(false); 
         const [editContent, setEditContent] = useState(post.content); 
         const [isFlashing, setIsFlashing] = useState(false); 
         const [showRetweetMenu, setShowRetweetMenu] = useState(false); 
         const hasFlashed = useRef(false);
 
-        // 🔥 [수정]: originalPost의 존재 여부를 먼저 확인
         const originalPost = posts.find(p => p.id === post.retweetedPostId);
         const isRetweet = !!post.retweetedPostId;
-        // Simple RT는 내용(content)이 없고, 답글(replyToId)이 아닌 리트윗입니다.
-        const isSimpleRetweet = isRetweet && !post.content && !post.replyToId; // Simple RT 정의
+        const isSimpleRetweet = isRetweet && !post.content && !post.replyToId;
 
         const isAuthor = post.authorId === App.currentUserId;
         const MessageIcon = MessageSquare; 
         
-        // 좋아요/북마크는 원본 트윗 ID를 기준으로 체크합니다.
         const targetPostId = isRetweet && originalPost ? originalPost.id : post.id;
         const isLiked = post.likes?.includes(App.currentUserId);
         const isBookmarked = post.bookmarks?.includes(App.currentUserId);
         
-        // 해당 트윗을 RT한 사용자들의 수 (Simple RT와 QT 모두 포함)
         const retweetsCount = posts.filter(p => p.retweetedPostId === post.id).length;
         
-        // 현재 로그인 사용자가 이 게시물을 Simple RT했는지 확인 (언리트윗을 위해)
         const isRetweetedByCurrentUser = posts.some(p => 
             p.retweetedPostId === post.id && 
             !p.content && 
@@ -718,7 +715,6 @@
             p.authorId === App.currentUserId
         );
         
-        // Simple RT일 경우, RT한 사용자의 정보 대신 원본 게시물 작성자의 정보를 사용
         const postProfile = isSimpleRetweet && originalPost ? {
             name: originalPost.authorName,
             handle: originalPost.authorHandle,
@@ -750,32 +746,40 @@
 
 
         const handleSaveEdit = async () => {
-            // 🖼️ 이미지 URL은 PostItem에서는 수정하지 않음. content만 수정 가능
             const success = await onEditPost(post.id, editContent);
             if (success) {
                 setIsEditing(false);
             }
         };
         
-        // ************************************************
-        // ✅ [유지] 답글(댓글)을 **오래된 순(오름차순)**으로 정렬하여 대화 흐름을 만듭니다.
-        // ************************************************
         const replies = posts
           .filter(p => p.replyToId === post.id)
-          // a - b: 오래된 순 (오름차순 / Chronological)으로 정렬
           .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()); 
           
         const isReplyLimitActive = isMainTimeline && replies.length > 2 && nestedLevel === 0;
         
-        // 요약 보기일 경우: 가장 마지막(최신) 답글 2개만 보여줍니다. (여전히 오래된 순으로 표시됨)
         const visibleReplies = isReplyLimitActive 
-            ? replies.slice(-2) // 배열의 뒤에서 2개 (가장 최근 2개)를 가져옴. 순서는 유지 (오래된 -> 최신)
-            : replies; // 전체 보기일 경우: 전체를 오래된 순으로 표시 (Oldest -> Newest)
+            ? replies.slice(-2)
+            : replies;
             
         const hiddenReplyCount = isReplyLimitActive ? replies.length - 2 : 0;
-        // ************************************************
         
-        const shouldHideNestedRepliesInMain = isMainTimeline && nestedLevel > 0;
+        // ===============================================================
+        // ✅ [핵심 수정] 답글 렌더링 조건 로직 (깊이 1단계로 수정)
+        // ===============================================================
+        const shouldRenderReplies = useMemo(() => {
+            if (replies.length === 0) return false;
+
+            if (isMainTimeline) {
+                // 메인 타임라인: 최상위 게시물(nestedLevel=0)의 답글만 렌더링
+                return nestedLevel === 0;
+            } else {
+                // 스레드 뷰: 현재 게시물로부터 1단계 깊이까지만 렌더링 (직접적인 답글만)
+                // 즉, 현재 게시물의 nestedLevel이 0일 때만 그 자식(답글)들을 렌더링함
+                return nestedLevel < 1;
+            }
+        }, [replies.length, isMainTimeline, nestedLevel]);
+        // ===============================================================
         
         const animationClass = isFlashing ? 'animate-pulse-once dark:animate-dark-pulse-once bg-blue-50 dark:bg-blue-900/50' : '';
 
@@ -794,19 +798,16 @@
             setShowRetweetMenu(false);
         };
 
-        // 💡 답글 버튼 클릭 핸들러 추가/수정
         const handleReplyButtonClick = (e) => {
             e.stopPropagation();
             if (App.currentUserId) {
-                 onReplyClick(post); // 💡 App 컴포넌트의 모달을 띄우기 위해 post 객체를 전달
+                 onReplyClick(post);
             }
         };
-
 
         return (
           <div className={`border-b border-gray-100 dark:border-gray-800 ${nestedLevel > 0 ? 'pl-8' : ''}`}>
             
-            {/* FIX 1: originalPost가 있을 때만 Simple RT 배너 표시 */}
             {isSimpleRetweet && originalPost && (
                 <div className="flex items-center text-green-500 text-xs font-semibold px-4 pt-2 dark:text-green-400 cursor-default">
                     {typeof RepeatIcon === 'string' ? <span className="mr-1 text-sm">{RepeatIcon}</span> : <RepeatIcon size={14} className="mr-1" />}
@@ -830,7 +831,6 @@
                 <div className="flex-grow">
                   <div className="flex items-center justify-between space-x-1 text-sm">
                     <div className="flex items-center space-x-1">
-                        {/* Simple RT일 경우 원본 작성자 이름 표시 */}
                         <span className="font-bold dark:text-white">
                             {isSimpleRetweet && originalPost ? originalPost.authorName : post.authorName}
                         </span>
@@ -841,7 +841,6 @@
                         {post.editedAt && <span className="text-xs text-gray-400 italic">(수정됨)</span>}
                     </div>
                     
-                    {/* FIX 2: Simple RT가 아닐 때 (일반 게시물, QT)만 수정/삭제 버튼 표시 */}
                     {isAuthor && !isSimpleRetweet && ( 
                         <div className="flex space-x-2">
                             <button 
@@ -887,27 +886,23 @@
                       </div>
                   ) : (
                       <>
-                        {/* 💥 수정된 부분: Simple RT일 경우 원본 게시물의 내용을 바로 표시 */}
                         {isSimpleRetweet && originalPost ? (
                             <p className="mt-1 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{originalPost.content}</p>
                         ) : (
                             <>
-                                {/* 인용 트윗 (QT)의 본문 및 일반 게시물의 본문 */}
                                 <p className="mt-1 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{post.content}</p>
                                 
-                                {/* 🖼️ 첨부 이미지 표시: Simple RT가 아니고, imageUrl이 있을 때 */}
                                 {post.imageUrl && !isSimpleRetweet && (
                                     <div className="mt-3 max-h-96 overflow-hidden rounded-xl">
                                         <img 
                                             src={post.imageUrl} 
                                             alt="첨부 이미지" 
                                             className="w-full h-auto object-cover border border-gray-300 dark:border-gray-600"
-                                            onError={(e) => {e.target.style.display='none';}} // 이미지 로딩 실패 시 숨김
+                                            onError={(e) => {e.target.style.display='none';}}
                                         />
                                     </div>
                                 )}
 
-                                {/* 인용된 게시물 블록은 내용(post.content)이 있을 때만 (즉, Quote Tweet일 때만) 표시 */}
                                 {originalPost && isRetweet && post.content && <QuotedPost originalPost={originalPost} onThreadSelect={onThreadSelect} />}
                             </>
                         )}
@@ -915,7 +910,6 @@
                   )}
                   
                   <div className="flex mt-3 text-gray-500 dark:text-gray-400 text-sm space-x-6">
-                    {/* 답글 버튼 수정: 모달을 띄우는 함수 호출 */}
                     <button 
                       onClick={handleReplyButtonClick}
                       className="flex items-center space-x-1 hover:text-blue-500 transition"
@@ -925,7 +919,6 @@
                       <span>{replies.length > 0 ? replies.length : ''}</span>
                     </button>
 
-                    {/* 리트윗 버튼 및 메뉴 */}
                     <div className="relative">
                         <button
                             onClick={(e) => {e.stopPropagation(); setShowRetweetMenu(!showRetweetMenu);}}
@@ -939,7 +932,6 @@
                             <span>{retweetsCount > 0 ? retweetsCount : ''}</span>
                         </button>
                         
-                        {/* 리트윗 메뉴 */}
                         {showRetweetMenu && (
                             <div className="retweet-menu absolute left-0 bottom-full mb-2 w-48 bg-white dark:bg-gray-700 rounded-xl shadow-xl border border-gray-200 dark:border-gray-600 z-10 overflow-hidden" onClick={e => e.stopPropagation()}>
                                 <button
@@ -958,7 +950,6 @@
                         )}
                     </div>
 
-                    {/* 좋아요 버튼 (Heart) - RT/QT일 경우 원본의 ID로 토글 요청 */}
                     <button
                         onClick={(e) => {e.stopPropagation(); onToggleLike(targetPostId);}}
                         className={`flex items-center space-x-1 transition disabled:opacity-50 ${isLiked ? 'text-red-500 hover:text-red-600' : 'hover:text-red-500'}`}
@@ -971,7 +962,6 @@
                         <span>{post.likes?.length > 0 ? post.likes.length : ''}</span>
                     </button>
 
-                    {/* 북마크 버튼 (Bookmark) - RT/QT일 경우 원본의 ID로 토글 요청 */}
                     <button
                         onClick={(e) => {e.stopPropagation(); onToggleBookmark(targetPostId);}}
                         className={`flex items-center space-x-1 transition disabled:opacity-50 ${isBookmarked ? 'text-blue-500 hover:text-blue-600' : 'hover:text-blue-500'}`}
@@ -987,9 +977,8 @@
               </div>
             </div>
             
-            {replies.length > 0 && !shouldHideNestedRepliesInMain && (
+            {shouldRenderReplies && (
               <div className="border-l-2 border-blue-200 ml-5 dark:border-blue-700">
-                {/* visibleReplies는 이제 요약 보기와 전체 보기 모두 '오래된 순 -> 최신순'으로 정렬됨 */}
                 {visibleReplies.map(reply => (
                   <PostItem 
                     key={reply.id} 
@@ -1005,11 +994,11 @@
                     onToggleLike={onToggleLike} 
                     onToggleBookmark={onToggleBookmark}
                     onRetweetAction={onRetweetAction}
-                    onReplyClick={onReplyClick} // 💡 onReplyClick prop 전달
+                    onReplyClick={onReplyClick}
                   />
                 ))}
                 
-                {hiddenReplyCount > 0 && nestedLevel === 0 && (
+                {hiddenReplyCount > 0 && isMainTimeline && nestedLevel === 0 && (
                     <div 
                         className="p-2 ml-5 text-sm font-semibold text-blue-500 hover:text-blue-600 cursor-pointer" 
                         onClick={() => onThreadSelect(post.id)}
@@ -1019,13 +1008,12 @@
                 )}
               </div>
             )}
-
-            {/* {showReplyForm && ( // 💡 삭제: 인라인 폼 제거
-              <ReplyForm parentId={post.id} onReply={App.handlePost} currentUserProfile={App.currentUserProfile} currentUserId={App.currentUserId} />
-            )} */}
           </div>
         );
     };
+    // ====================================================================================
+    // 🚀🚀🚀 PostItem 컴포넌트 수정 완료 🚀🚀🚀
+    // ====================================================================================
 
     const ReplyForm = ({ parentId, onReply, isMainPost = false, currentUserProfile, currentUserId }) => {
         const [replyContent, setReplyContent] = useState('');
@@ -1133,7 +1121,7 @@
     };
 
 
-    const App = () => {
+const App = () => {
         const [db, setDb] = useState(null);
         const [auth, setAuth] = useState(null);
         const [currentUserId, setCurrentUserId] = useState(getInitialActiveUser());
@@ -1143,11 +1131,8 @@
         const [newPostId, setNewPostId] = useState(null); 
         const [selectedPostIdForThread, setSelectedPostIdForThread] = useState(null);
         const [postToDelete, setPostToDelete] = useState(null); 
-        // ✅ Firestore에서 불러온 사용자 지정 프로필 상태 추가
         const [currentCustomProfile, setCurrentCustomProfile] = useState(null); 
-        // 🌟 모든 사용자 지정 프로필을 담을 새로운 상태 추가
         const [allCustomProfiles, setAllCustomProfiles] = useState({}); 
-        // 🌟 팀 이름 커스터마이징을 위한 상태 추가
         const [customGroups, setCustomGroups] = useState({}); 
         const [editingGroupId, setEditingGroupId] = useState(null); 
         const [editingGroupName, setEditingGroupName] = useState(''); 
@@ -1158,7 +1143,6 @@
         const [postToRetweet, setPostToRetweet] = useState(null); 
         const [replyToPost, setReplyToPost] = useState(null); 
         
-        // setDoc도 window.firebase에서 가져옵니다.
         const { getDoc, doc, onSnapshot, setDoc, collection } = window.firebase || {};
 
         const mockUserProfile = useMemo(() => 
@@ -1168,18 +1152,14 @@
 
         const currentUserProfile = useMemo(() => {
             if (!mockUserProfile) return null;
-            // ❌ customProfile 대신 Firestore에서 불러온 currentCustomProfile 사용
             const custom = currentCustomProfile || {}; 
-
             const profileImageUrl = custom.profileImageUrl || ''; 
-
             return { 
                 ...mockUserProfile, 
                 name: custom.name || mockUserProfile.name,
                 handle: custom.handle || mockUserProfile.handle,
                 profileImageUrl: profileImageUrl, 
             };
-        // ✅ 의존성 배열 변경
         }, [currentUserId, mockUserProfile, currentCustomProfile]); 
 
         App.currentUserProfile = currentUserProfile; 
@@ -1190,25 +1170,19 @@
             [activeGroup]
         );
         
-        // ✅ Firestore에 프로필을 저장하도록 수정
         const handleProfileSave = useCallback(async ({ name, handle, profileImageUrl }) => {
             if (!db || !currentUserId) return;
-            
             try {
-                // userProfiles 컬렉션에 사용자 ID를 문서 ID로 사용하여 저장
                 const profileDocRef = doc(db, `/artifacts/${canvasAppId}/public/data/userProfiles`, currentUserId);
-                
                 await setDoc(profileDocRef, { 
                     name, 
                     handle, 
                     profileImageUrl: profileImageUrl.trim() 
-                }, { merge: true }); // 기존 필드를 덮어쓰지 않고 병합합니다.
-
+                }, { merge: true });
             } catch (error) {
                 console.error("Error saving profile to Firestore:", error);
                 alert("프로필 저장에 실패했습니다. 콘솔을 확인해 주세요.");
             }
-
             setIsProfileModalOpen(false);
         }, [db, currentUserId]);
         
@@ -1233,14 +1207,11 @@
             }
         };
 
-        // 🌟 팀 이름 저장 핸들러
         const handleSaveGroupName = useCallback(async (groupId) => {
             if (!db || !groupId || editingGroupName.trim() === '') return;
-        
             try {
                 const groupDocRef = doc(db, `/artifacts/${canvasAppId}/public/data/customGroups`, groupId);
                 await setDoc(groupDocRef, { name: editingGroupName.trim() }, { merge: true });
-                
                 setEditingGroupId(null);
                 setEditingGroupName('');
             } catch (error) {
@@ -1249,16 +1220,13 @@
             }
         }, [db, editingGroupName]);
 
-        // 🌟 팀 이름 편집 시작 핸들러
         const handleStartEditGroup = useCallback((group) => {
-            // 커스텀 이름이 있으면 그걸로, 없으면 기본 이름으로 시작
             const initialName = customGroups[group.id] || group.name;
-            setActiveGroup(group.id); // 편집 모드로 들어가기 전에 해당 그룹을 활성화
+            setActiveGroup(group.id);
             setEditingGroupName(initialName);
             setEditingGroupId(group.id);
         }, [customGroups]);
 
-        // 🌟 팀 이름 편집 취소 핸들러
         const handleCancelEditGroup = useCallback(() => {
             setEditingGroupId(null);
             setEditingGroupName('');
@@ -1308,7 +1276,6 @@
             }
         }, []);
         
-        // ✅ Firestore에서 현재 사용자 프로필 데이터를 실시간으로 불러오는 useEffect 추가
         useEffect(() => {
             if (!db || !currentUserId) {
                 setCurrentCustomProfile(null);
@@ -1316,28 +1283,22 @@
             }
 
             const profileDocRef = doc(db, `/artifacts/${canvasAppId}/public/data/userProfiles`, currentUserId);
-            
             const unsubscribe = onSnapshot(profileDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     setCurrentCustomProfile(docSnap.data());
                 } else {
-                    // 문서가 없으면, 사용자 지정 프로필이 없다는 의미로 빈 객체 설정
                     setCurrentCustomProfile({}); 
                 }
             }, (error) => {
                 console.error("Firestore Profile 불러오기 오류:", error);
                 setCurrentCustomProfile({});
             });
-
             return () => unsubscribe();
         }, [db, currentUserId]);
 
-        // 🌟 모든 사용자 지정 프로필을 Firestore에서 실시간으로 불러오는 useEffect 추가
         useEffect(() => {
             if (!db || isLoading) return;
-
             const profilesColRef = collection(db, `/artifacts/${canvasAppId}/public/data/userProfiles`);
-            
             const unsubscribe = onSnapshot(profilesColRef, (snapshot) => {
                 const fetchedProfiles = {};
                 snapshot.docs.forEach(doc => {
@@ -1347,36 +1308,29 @@
             }, (error) => {
                 console.error("Firestore All Profiles 불러오기 오류:", error);
             });
-
             return () => unsubscribe();
         }, [db, isLoading]);
 
-        // 🌟 모든 팀 지정 이름을 Firestore에서 실시간으로 불러오는 useEffect 추가
         useEffect(() => {
             if (!db || isLoading) return;
-
             const groupsColRef = collection(db, `/artifacts/${canvasAppId}/public/data/customGroups`);
-            
             const unsubscribe = onSnapshot(groupsColRef, (snapshot) => {
                 const fetchedGroups = {};
                 snapshot.docs.forEach(doc => {
-                    fetchedGroups[doc.id] = doc.data().name; // { 'dev': '개발팀 (수정됨)' }
+                    fetchedGroups[doc.id] = doc.data().name;
                 });
                 setCustomGroups(fetchedGroups);
             }, (error) => {
                 console.error("Firestore Custom Groups 불러오기 오류:", error);
             });
-
             return () => unsubscribe();
         }, [db, isLoading]);
 
 
         useEffect(() => {
             if (!db || isLoading) return;
-
             const postsColRef = collection(db, `/artifacts/${canvasAppId}/public/data/posts`);
             const q = query(postsColRef);
-
             const unsubscribe = onSnapshot(q, (snapshot) => {
                 const fetchedPosts = snapshot.docs.map(doc => ({
                     id: doc.id,
@@ -1386,7 +1340,7 @@
                     likes: doc.data().likes || [], 
                     bookmarks: doc.data().bookmarks || [], 
                     retweetedPostId: doc.data().retweetedPostId || null,
-                    imageUrl: doc.data().imageUrl || null, // 🖼️ 이미지 URL 필드 추가
+                    imageUrl: doc.data().imageUrl || null,
                 }));
                 
                 const sortedPosts = fetchedPosts.sort((a, b) => {
@@ -1394,41 +1348,32 @@
                     const bSortTime = (b.threadUpdatedTimestamp || b.timestamp).getTime();
                     return bSortTime - aSortTime; 
                 });
-                
                 setPosts(sortedPosts);
             }, (error) => {
                 console.error("Firestore 데이터 불러오기 오류:", error);
             });
-
             return () => unsubscribe();
         }, [db, isLoading]); 
 
-        // 💡 답글 버튼 클릭 핸들러 추가
         const handleReplyClick = useCallback((post) => {
             if (App.currentUserId) {
                 setReplyToPost(post);
             }
         }, []);
         
-        // 💡 답글 모달 닫기 핸들러 추가
         const handleCancelReply = useCallback(() => {
             setReplyToPost(null);
         }, []);
 
-        // 🖼️ imageUrl 매개변수 추가
         const handlePost = useCallback(async (content, replyToId = null, retweetedPostId = null, imageUrl = null) => {
-            if (!db || !currentUserId || !getDoc) { 
-                return;
-            }
-            if (content.trim() === "" && !retweetedPostId && !imageUrl) return; // 이미지 URL이 있어도 게시 가능
+            if (!db || !currentUserId || !getDoc) return;
+            if (content.trim() === "" && !retweetedPostId && !imageUrl) return;
 
             const postingProfile = currentUserProfile || { 
                 uid: currentUserId, name: "Anonymous User", handle: "anonymous", color: "bg-gray-500", profile: "👤", profileImageUrl: '' 
             };
             
             let rootPostId = null;
-            
-            // 오직 답글(Reply)일 때만 threadUpdatedTimestamp를 업데이트하여 원본을 상단으로 올린다.
             if (replyToId) {
                 let currentParentId = replyToId;
                 let docRef;
@@ -1437,12 +1382,9 @@
                 while (currentParentId) {
                     docRef = doc(db, `/artifacts/${canvasAppId}/public/data/posts`, currentParentId);
                     docSnap = await getDoc(docRef);
-
                     if (!docSnap.exists()) break;
-
                     const parentData = docSnap.data();
                     const parentTargetId = parentData.replyToId; 
-
                     if (!parentTargetId) {
                         rootPostId = currentParentId; 
                         break;
@@ -1450,7 +1392,6 @@
                     currentParentId = parentTargetId; 
                 }
             }
-
 
             try {
                 const postsColRef = collection(db, `/artifacts/${canvasAppId}/public/data/posts`);
@@ -1464,7 +1405,7 @@
                     authorImageUrl: postingProfile.profileImageUrl, 
                     replyToId: replyToId, 
                     retweetedPostId: retweetedPostId,
-                    imageUrl: imageUrl && imageUrl.startsWith('http') ? imageUrl : null, // 🖼️ URL 형식 체크 후 저장 
+                    imageUrl: imageUrl && imageUrl.startsWith('http') ? imageUrl : null,
                     timestamp: serverTimestamp(),
                     likes: [], 
                     bookmarks: [], 
@@ -1476,7 +1417,6 @@
                         threadUpdatedTimestamp: serverTimestamp() 
                     });
                 }
-                
                 setNewPostId(newDocRef.id); 
             } catch (e) {
                 console.error("게시 실패:", e);
@@ -1484,12 +1424,9 @@
         }, [db, currentUserId, currentUserProfile, getDoc]);
         App.handlePost = handlePost;
         
-        // [수정]: 리트윗/인용 트윗 액션 처리 로직 수정
         const handleRetweetAction = useCallback(async (targetPost, actionType) => {
             if (!currentUserId || !targetPost) return;
-            
             const isSimpleRetweetPost = targetPost.retweetedPostId && !targetPost.content && !targetPost.replyToId;
-
             const targetOriginalId = isSimpleRetweetPost ? targetPost.retweetedPostId : targetPost.id;
             
             if (!targetOriginalId) {
@@ -1500,15 +1437,12 @@
                  }
                  return console.error("액션 대상 원본 게시물을 찾을 수 없습니다.");
             }
-
             const postToQuote = posts.find(p => p.id === targetOriginalId);
-
 
             if (actionType === 'QT') {
                 if (!postToQuote) return console.error("인용할 원본 게시물을 찾을 수 없습니다.");
                 setPostToRetweet({ post: postToQuote, action: 'QT' });
             } else if (actionType === 'RT') {
-                
                 const existingSimpleRT = posts.find(p => 
                     p.retweetedPostId === targetOriginalId && 
                     !p.content && 
@@ -1525,13 +1459,11 @@
                     }
                 } else {
                     if (!postToQuote) return console.error("리트윗할 원본 게시물을 찾을 수 없습니다.");
-                    // 🖼️ Simple RT는 content, imageUrl 모두 null로 보냄
                     await handlePost("", null, targetOriginalId, null);
                 }
             }
         }, [currentUserId, posts, handlePost, db]);
         
-        // 🖼️ imageUrl 매개변수 추가
         const submitQuoteTweet = useCallback(async (content, originalPostId, imageUrl) => {
             if (content.trim() === "" && imageUrl.trim() === "") return;
             await handlePost(content, null, originalPostId, imageUrl);
@@ -1540,25 +1472,19 @@
 
         const toggleReaction = useCallback(async (postId, fieldName) => {
             if (!db || !currentUserId || !getDoc) return;
-
             try {
                 const docRef = doc(db, `/artifacts/${canvasAppId}/public/data/posts`, postId);
                 const docSnap = await getDoc(docRef);
-                
                 if (docSnap.exists()) {
                     const postData = docSnap.data();
                     const currentUsers = postData[fieldName] || [];
-                    
                     let newUsers;
                     if (currentUsers.includes(currentUserId)) {
                         newUsers = currentUsers.filter(uid => uid !== currentUserId);
                     } else {
                         newUsers = [...currentUsers, currentUserId];
                     }
-
-                    await updateDoc(docRef, { 
-                        [fieldName]: newUsers 
-                    });
+                    await updateDoc(docRef, { [fieldName]: newUsers });
                 }
             } catch (e) {
                 console.error(`${fieldName} 토글 실패:`, e);
@@ -1573,22 +1499,18 @@
             toggleReaction(postId, 'bookmarks');
         }, [toggleReaction]);
 
-
         const handleRequestDelete = useCallback((postId) => {
             const post = posts.find(p => p.id === postId);
             if (post) {
-                // 🖼️ imageUrl도 포함하여 전달
                 setPostToDelete({ id: postId, content: post.content, authorHandle: post.authorHandle, imageUrl: post.imageUrl }); 
             }
         }, [posts]);
         
         const confirmDelete = useCallback(async () => {
             if (!db || !postToDelete) return;
-
             try {
                 const docRef = doc(db, `/artifacts/${canvasAppId}/public/data/posts`, postToDelete.id);
                 await deleteDoc(docRef);
-
                 if (selectedPostIdForThread === postToDelete.id) {
                     setSelectedPostIdForThread(null);
                 }
@@ -1609,7 +1531,6 @@
 
         const handleEditPost = useCallback(async (postId, newContent) => {
             if (!db || !currentUserId || newContent.trim() === "") return false;
-            
             try {
                 const docRef = doc(db, `/artifacts/${canvasAppId}/public/data/posts`, postId);
                 await updateDoc(docRef, { 
@@ -1626,10 +1547,7 @@
 
         const displayPosts = useMemo(() => {
             if (selectedPostIdForThread) return []; 
-            
-            // replyToId가 없는 게시물만 가져옴 (루트 포스트)
             const rootPosts = posts.filter(p => !p.replyToId);
-            
             if (activeView === 'likes') {
                 if (!currentUserId) return [];
                 return rootPosts.filter(p => p.likes?.includes(currentUserId) && !p.retweetedPostId);
@@ -1638,13 +1556,10 @@
                 if (!currentUserId) return [];
                 return rootPosts.filter(p => p.bookmarks?.includes(currentUserId) && !p.retweetedPostId);
             }
-            
-            // 일반 타임라인: 루트 포스트 전체를 반환 (일반 게시물, QT, Simple RT 포함)
             return rootPosts;
         }, [posts, currentUserId, activeView, selectedPostIdForThread]);
         
         const currentViewData = VIEW_OPTIONS.find(v => v.id === activeView);
-
         const LoaderIcon = Loader; 
         const ToggleIcon = isProfileSelectorOpen ? ChevronUp : ChevronDown;
 
@@ -1657,7 +1572,30 @@
             );
         }
 
+        // ===============================================================
+        // ✅ [핵심 수정] 스레드 뷰의 '뒤로가기' 로직을 처리하기 위한 부분
+        // ===============================================================
         const selectedPost = posts.find(p => p.id === selectedPostIdForThread);
+        
+        // 현재 선택된 게시물에 부모 게시물(답글 대상)이 있는지 확인합니다.
+        const hasParentPost = selectedPost && selectedPost.replyToId;
+
+        // 뒤로가기 버튼에 표시될 텍스트를 결정합니다.
+        const backButtonText = hasParentPost
+            ? '← 이전 게시물로 돌아가기'
+            : `← ${currentViewData.name}로 돌아가기`;
+
+        // 뒤로가기 버튼 클릭 시 실행될 함수입니다.
+        const handleThreadBackClick = () => {
+            if (hasParentPost) {
+                // 부모 게시물이 있으면 부모 게시물의 스레드를 보여줍니다.
+                setSelectedPostIdForThread(selectedPost.replyToId);
+            } else {
+                // 부모 게시물이 없으면(최상위 글) 타임라인으로 돌아갑니다.
+                setSelectedPostIdForThread(null);
+            }
+        };
+        // ===============================================================
 
         const currentProfileDisplay = currentUserProfile || { name: '로그아웃됨', handle: 'guest', profile: '?', color: 'bg-gray-500', profileImageUrl: '' };
 
@@ -1666,7 +1604,6 @@
                 
                 <div className="fixed top-0 left-0 right-0 z-20 bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
                     <div className="w-full max-w-xl md:w-[576px] mx-auto p-3 flex justify-between items-center"> 
-                        
                         <button
                             onClick={toggleProfileSelector}
                             className="flex items-center space-x-2 text-lg font-bold text-gray-800 dark:text-white focus:outline-none"
@@ -1714,7 +1651,6 @@
                         <div className="flex justify-around p-2 mb-3 bg-gray-100 dark:bg-gray-900 rounded-lg shadow-inner">
                             {MOCK_GROUPS.map(group => {
                                 const isEditing = editingGroupId === group.id;
-                                // 🌟 커스텀 이름이 있으면 사용, 없으면 기본 이름 사용
                                 const displayName = customGroups[group.id] || group.name;
 
                                 if (isEditing) {
@@ -1725,11 +1661,9 @@
                                                 value={editingGroupName}
                                                 onChange={(e) => setEditingGroupName(e.target.value)}
                                                 onKeyDown={(e) => {
-                                                    // Enter 키로 저장 (내용 변경 및 비어있지 않아야 함)
                                                     if (e.key === 'Enter' && editingGroupName.trim() !== '' && editingGroupName.trim() !== displayName) {
                                                         handleSaveGroupName(group.id);
                                                     } 
-                                                    // Esc 키로 취소
                                                     else if (e.key === 'Escape') {
                                                         handleCancelEditGroup();
                                                     }
@@ -1740,7 +1674,6 @@
                                             <div className="flex space-x-1">
                                                 <button
                                                     onClick={() => handleSaveGroupName(group.id)}
-                                                    // 이름이 비어있거나 변경되지 않았으면 비활성화
                                                     disabled={editingGroupName.trim() === '' || editingGroupName.trim() === displayName}
                                                     className="text-xs px-1 py-0.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 transition"
                                                 >
@@ -1762,11 +1695,9 @@
                                         key={group.id}
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            // 🌟 현재 활성화된 그룹을 클릭하면 편집 모드로 진입
                                             if (activeGroup === group.id) {
                                                 handleStartEditGroup(group);
                                             } else {
-                                                // 다른 그룹을 클릭하면 그룹만 변경
                                                 setActiveGroup(group.id);
                                             }
                                         }}
@@ -1786,18 +1717,15 @@
 
                         <div className="p-2 bg-gray-50 dark:bg-gray-900 rounded-lg max-h-60 overflow-y-auto">
                             <span className="font-semibold text-gray-500 dark:text-gray-400 self-center mb-2 block border-b pb-1 dark:border-gray-700">
-                                {/* 🌟 활성화된 그룹의 커스텀 이름 표시 */}
                                 {customGroups[activeGroup] || MOCK_GROUPS.find(g => g.id === activeGroup)?.name} 프로필 선택:
                             </span>
                             <div className="flex flex-wrap justify-center gap-3">
-                                {/* 🌟 수정: 모든 커스텀 프로필을 확인하여 사용자 지정된 정보를 표시합니다. */}
                                 {filteredUsers.map(user => {
                                     const custom = allCustomProfiles[user.uid] || {};
                                     const displayProfile = {
                                         ...user,
                                         name: custom.name || user.name,
                                         handle: custom.handle || user.handle,
-                                        // 커스텀 이미지 URL이 있을 경우 사용합니다.
                                         profileImageUrl: custom.profileImageUrl || '', 
                                     };
 
@@ -1810,13 +1738,12 @@
                                             ${currentUserId === user.uid ? 'ring-4 ring-offset-2 ring-red-400 scale-[1.01] opacity-100 shadow-lg' : 'opacity-80 hover:opacity-100'}
                                             `}
                                         >
-                                            {/* ProfilePictureDisplay를 사용하여 이미지 또는 이모지를 표시 */}
                                             <div className="mr-2">
                                                 <ProfilePictureDisplay 
                                                     profile={displayProfile} 
                                                     sizeClass="w-8 h-8"
                                                     textSizeClass="text-sm"
-                                                    isSmall={true} // 버튼 내부에서 사용됨을 알립니다.
+                                                    isSmall={true}
                                                 />
                                             </div>
                                             
@@ -1876,11 +1803,12 @@
                     <main>
                       {selectedPostIdForThread ? (
                         <div className="p-4">
+                            {/* ✅ [핵심 수정] 버튼의 onClick과 텍스트를 위에서 정의한 변수로 교체 */}
                             <button 
-                                onClick={() => setSelectedPostIdForThread(null)}
+                                onClick={handleThreadBackClick}
                                 className="text-sm text-blue-500 hover:text-blue-600 font-semibold mb-4 p-2 rounded-lg bg-blue-50 dark:bg-gray-700 transition"
                             >
-                                ← {currentViewData.name}로 돌아가기
+                                {backButtonText}
                             </button>
                             <h2 className="text-lg font-bold border-b pb-2 mb-4 dark:border-gray-700">스레드 보기</h2>
                             {selectedPost ? (
@@ -1896,7 +1824,7 @@
                                     onToggleLike={handleToggleLike} 
                                     onToggleBookmark={handleToggleBookmark} 
                                     onRetweetAction={handleRetweetAction} 
-                                    onReplyClick={handleReplyClick} // 💡 onReplyClick prop 전달
+                                    onReplyClick={handleReplyClick}
                                 />
                             ) : (
                                 <div className="text-center text-gray-500">게시물을 찾을 수 없습니다.</div>
@@ -1922,7 +1850,7 @@
                                 onToggleLike={handleToggleLike} 
                                 onToggleBookmark={handleToggleBookmark} 
                                 onRetweetAction={handleRetweetAction}
-                                onReplyClick={handleReplyClick} // 💡 onReplyClick prop 전달
+                                onReplyClick={handleReplyClick}
                             />
                             ))
                         )
@@ -1930,7 +1858,6 @@
                     </main>
                 </div>
                 
-                {/* 모달 렌더링 */}
                 <DeleteConfirmationModal
                     post={postToDelete}
                     onConfirm={confirmDelete}
@@ -1945,7 +1872,6 @@
                     />
                 )}
                 
-                {/* 인용 트윗 모달 */}
                 {postToRetweet?.action === 'QT' && currentUserId && (
                     <QuoteTweetModal
                         post={postToRetweet.post}
@@ -1956,7 +1882,6 @@
                     />
                 )}
 
-                {/* 💡 답글 작성 모달 렌더링 */}
                 {replyToPost && App.currentUserId && (
                     <ReplyModal
                         post={replyToPost}
