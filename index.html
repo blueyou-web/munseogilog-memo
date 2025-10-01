@@ -20,21 +20,22 @@
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
                     },
+                    // [1. 새 게시글 팝 애니메이션]을 더 부드럽게 수정 (0.7s -> 1.2s)
                     keyframes: {
                         'pulse-once': {
-                            '0%': { opacity: 0, transform: 'scale(0.98)' },
-                            '50%': { opacity: 1, transform: 'scale(1.005)', backgroundColor: 'rgba(59, 130, 246, 0.1)' },
-                            '100%': { opacity: 1, transform: 'scale(1)', backgroundColor: 'transparent' },
+                            '0%': { opacity: 0, transform: 'translateY(-10px)', backgroundColor: 'transparent' },
+                            '10%': { opacity: 0.8, transform: 'translateY(0)', backgroundColor: 'rgba(59, 130, 246, 0.05)' },
+                            '100%': { opacity: 1, backgroundColor: 'transparent' },
                         },
                         'dark-pulse-once': {
-                            '0%': { opacity: 0, transform: 'scale(0.98)' },
-                            '50%': { opacity: 1, transform: 'scale(1.005)', backgroundColor: 'rgba(29, 78, 216, 0.3)' },
-                            '100%': { opacity: 1, transform: 'scale(1)', backgroundColor: 'transparent' },
+                            '0%': { opacity: 0, transform: 'translateY(-10px)', backgroundColor: 'transparent' },
+                            '10%': { opacity: 0.8, transform: 'translateY(0)', backgroundColor: 'rgba(29, 78, 216, 0.1)' },
+                            '100%': { opacity: 1, backgroundColor: 'transparent' },
                         }
                     },
                     animation: {
-                        'pulse-once': 'pulse-once 1.s ease-in-out',
-                        'dark-pulse-once': 'dark-pulse-once 1.s ease-in-out',
+                        'pulse-once': 'pulse-once 1.2s ease-out', // 1.2s로 변경
+                        'dark-pulse-once': 'dark-pulse-once 1.2s ease-out', // 1.2s로 변경
                     }
                 },
             }
@@ -708,20 +709,22 @@ const MOCK_USERS = [
             profileImageUrl: post.authorImageUrl,
         };
 
+        // [1. 새 게시글 팝 애니메이션] - useEffect 수정 (1.2s로 변경)
         useEffect(() => {
-            if (post.id === newPostId && !hasFlashed.current) {
+            // 새 게시물이 타임라인에 추가되었을 때만 애니메이션 적용
+            if (post.id === newPostId && !hasFlashed.current && !isThreadView) { 
                 setIsFlashing(true);
                 hasFlashed.current = true;
                 const timer = setTimeout(() => {
                     setIsFlashing(false);
                     if (onNewPostAnimated) onNewPostAnimated();
-                }, 1500);
+                }, 1250); // 애니메이션 시간 (1.2s보다 약간 길게)
                 return () => clearTimeout(timer);
             }
             if (newPostId === null && isFlashing) {
                 setIsFlashing(false);
             }
-        }, [newPostId, post.id, onNewPostAnimated, isFlashing]);
+        }, [newPostId, post.id, onNewPostAnimated, isFlashing, isThreadView]);
 
 
         const handleSaveEdit = async () => {
@@ -737,7 +740,8 @@ const MOCK_USERS = [
         
         const hasReplies = replies.length > 0;
         
-        const animationClass = isFlashing ? 'animate-pulse-once dark:animate-dark-pulse-once bg-blue-50 dark:bg-blue-900/50' : '';
+        // [1. 새 게시글 팝 애니메이션] - 클래스 적용
+        const animationClass = isFlashing ? 'animate-pulse-once dark:animate-dark-pulse-once' : '';
 
         const handlePostClick = (e) => {
              // Allow clicks on timeline previews to navigate
@@ -771,9 +775,15 @@ const MOCK_USERS = [
         
         const finalDrawTopLine = drawTopLine !== undefined ? drawTopLine : props.hasParent;
         const finalDrawBottomLine = drawBottomLine !== undefined ? drawBottomLine : hasReplies;
+        
+        // [2. 댓글 스레드 구분선 복구] - 스레드 뷰일지라도, 대댓글(replyToId가 있는 경우)이 아니면 경계선을 표시합니다.
+        // isThreadView && post.replyToId 가 참일 경우 (즉, 댓글의 댓글인 경우)에만 경계선을 제거합니다.
+        // isMainFocus는 항상 border-b를 표시해야 스레드 제목 역할을 합니다.
+        const shouldHaveBorder = !isThreadView || isMainFocus || (isThreadView && !post.replyToId);
+        const borderClass = shouldHaveBorder ? `border-b border-gray-100 dark:border-gray-800` : '';
 
         return (
-            <div className={isTimelinePreview || isTimelineParent ? '' : `border-b border-gray-100 dark:border-gray-800`}>
+            <div className={isTimelinePreview || isTimelineParent ? '' : borderClass}>
                 {isSimpleRetweet && originalPost && (
                     <div className="flex items-center text-green-500 text-xs font-semibold px-4 pt-2 dark:text-green-400 cursor-default">
                         {typeof RepeatIcon === 'string' ? <span className="mr-1 text-sm">{RepeatIcon}</span> : <RepeatIcon size={14} className="mr-1" />}
@@ -1092,12 +1102,14 @@ const RecursiveReplies = ({ parentId, allPostProps, posts, postsWithChildren }) 
             {childReplies.map((reply, index) => {
                 const hasChildren = postsWithChildren.has(reply.id);
                 
+                // [2. 댓글 스레드 그룹화] - 대댓글의 대댓글은 isThreadView=true로 전달하여 border-b를 제거합니다.
+                // ExpandableReply 내에서 이미 처리했기 때문에 여기서는 isThreadView=true를 고정합니다.
                 return (
                     <div key={reply.id}>
                         <PostItem
                             {...allPostProps}
                             post={reply}
-                            isThreadView={true}
+                            isThreadView={true} // 스레드 내 하위 댓글로 처리
                             drawTopLine={true}
                             drawBottomLine={hasChildren}
                         />
@@ -1130,7 +1142,7 @@ const ExpandableReply = ({ reply, index, replies, allPostProps, posts, postsWith
             <PostItem
                 {...allPostProps}
                 post={reply}
-                isThreadView={true}
+                isThreadView={true} // 스레드 내 직계 댓글로 처리 (PostItem에서 border 결정)
                 drawTopLine={true}
                 drawBottomLine={hasChildren}
             />
@@ -1138,7 +1150,7 @@ const ExpandableReply = ({ reply, index, replies, allPostProps, posts, postsWith
                 <div className="pb-2" onClick={(e) => { e.stopPropagation(); setIsExpanded(true); }}>
                     <div className="relative pt-1 ml-16 cursor-pointer">
                         <div className="absolute left-[-26px] top-[-4px] text-center w-5">
-                            <span className="text-gray-400 dark:text-gray-600 text-lg leading-none">:</span>
+                            <span className="text-gray-400 dark:text-gray-600 text-lg leading-none"></span> {/* 점선 대신 빈 공간 */}
                         </div>
                         <span className="text-sm font-semibold text-blue-500 hover:text-blue-600">
                            {`답글 ${descendantCount}개 보기`}
@@ -1629,6 +1641,7 @@ const App = () => {
                 for (const latestPostInActivity of posts) {
                     
                     // 단순 리트윗을 먼저 처리합니다.
+                    // 단순 리트윗을 먼저 처리합니다.
                     if (latestPostInActivity.retweetedPostId && !latestPostInActivity.content && !latestPostInActivity.replyToId) {
                         if (!processedBranches.has(latestPostInActivity.id)) { // 중복 방지를 위해 자신의 ID를 사용
                             timelineActivities.push({ type: 'retweet', activity: latestPostInActivity, id: latestPostInActivity.id });
@@ -1652,7 +1665,7 @@ const App = () => {
                     // 경로에 루트만 있다면, 가지 ID는 루트의 ID가 됩니다.
                     const branchIdentifier = path.length > 1 ? path[1].id : rootPost.id;
 
-                    // 이 가지에서 더 최신 활동을 이미 처리했다면 건너뜁니다.
+                    // 이 가지에서 더 최신 활동을 이미 처리했다면 건너킵니다.
                     if (processedBranches.has(branchIdentifier)) {
                         continue;
                     }
@@ -2154,4 +2167,3 @@ const App = () => {
 
 </body>
 </html>
-
