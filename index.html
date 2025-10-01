@@ -975,12 +975,20 @@ const MOCK_USERS = [
     };
 
     const ReplyForm = ({ parentId, onReply, isMainPost = false, currentUserProfile, currentUserId, parentAuthorHandle }) => {
-        const initialContent = !isMainPost && parentAuthorHandle ? `@${parentAuthorHandle} ` : '';
-        const [replyContent, setReplyContent] = useState(initialContent);
+        const [replyContent, setReplyContent] = useState('');
         const [imageUrl, setImageUrl] = useState('');
         const [showImageInput, setShowImageInput] = useState(false);
         const textareaRef = useRef(null); 
         
+        // --- 수정된 부분 ---
+        // 답글을 달 대상 게시물이 변경될 때마다 입력창의 내용을 업데이트하여
+        // 항상 올바른 사용자 아이디가 표시되도록 합니다.
+        useEffect(() => {
+            const initialContent = !isMainPost && parentAuthorHandle ? `@${parentAuthorHandle} ` : '';
+            setReplyContent(initialContent);
+        }, [parentId, parentAuthorHandle, isMainPost]);
+        // --- 수정 끝 ---
+
         useEffect(() => {
             if (textareaRef.current) {
                 textareaRef.current.style.height = 'auto'; 
@@ -998,6 +1006,8 @@ const MOCK_USERS = [
         const handleReplySubmit = (e) => {
             e.preventDefault();
             onReply(replyContent, parentId, null, imageUrl.trim()); 
+            // 제출 후에도 다시 올바른 아이디로 초기화합니다.
+            const initialContent = !isMainPost && parentAuthorHandle ? `@${parentAuthorHandle} ` : '';
             setReplyContent(isMainPost ? '' : initialContent);
             setImageUrl('');
             setShowImageInput(false);
@@ -2082,4 +2092,3 @@ const App = () => {
 
 </body>
 </html>
-
