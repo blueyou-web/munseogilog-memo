@@ -33,8 +33,8 @@
                         }
                     },
                     animation: {
-                        'pulse-once': 'pulse-once 1.5s ease-in-out',
-                        'dark-pulse-once': 'dark-pulse-once 1.5s ease-in-out',
+                        'pulse-once': 'pulse-once 1.s ease-in-out',
+                        'dark-pulse-once': 'dark-pulse-once 1.s ease-in-out',
                     }
                 },
             }
@@ -44,11 +44,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // setDoc 함수를 추가로 import 합니다.
         import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, deleteDoc, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
-        // Expose Firebase functions to the global window object for Babel access
-        // setDoc을 포함하여 노출합니다.
         window.firebase = {
             initializeApp, getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut,
             getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, deleteDoc, updateDoc, getDoc, setDoc
@@ -74,11 +71,9 @@
     const Heart = Lucide.Heart || '❤️';
     const Bookmark = Lucide.Bookmark || '☆';
     const RepeatIcon = Lucide.Repeat2 || '⇆';
-    // 🖼️ 이미지 관련 아이콘 추가
     const Image = Lucide.Image || '🖼️';
     const X = Lucide.X || '❌';
-    const ArrowLeft = Lucide.ArrowLeft || '←'; // 팝업 닫기/돌아가기 버튼용 아이콘 추가
-    // 🔔 알림 아이콘 추가
+    const ArrowLeft = Lucide.ArrowLeft || '←';
     const Bell = Lucide.Bell || '🔔';
 
     const hardcodedFirebaseConfig = {
@@ -92,7 +87,6 @@
     };
     
     const ACTIVE_USER_STORAGE_KEY = 'miniTwitterActiveUser';
-    // 🔔 알림 확인 시간 저장을 위한 키 추가
     const LAST_CHECKED_NOTIFICATIONS_KEY = 'miniTwitterLastCheckedNotifications';
 
     let firebaseConfig, initialAuthToken, canvasAppId;
@@ -112,36 +106,55 @@
     }
 
     const { initializeApp, getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut,
-            // setDoc 함수를 추가합니다.
             getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, deleteDoc, updateDoc, getDoc, setDoc } = window.firebase || {};
 
     const getInitialActiveUser = () => localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
     
-    const MOCK_GROUPS = [
-        { id: 'dev', name: '에이 팀', icon: 'A' },
-        { id: 'design', name: '비 팀', icon: 'B' },
-        { id: 'marketing', name: '씨 팀', icon: 'C' },
-        { id: 'finance', name: '디 팀', icon: 'D' },
-        { id: 'financ', name: '이 팀', icon: 'E' },
-    ];
-    const MOCK_USERS = [
-        { uid: 'user-001', name: '유저 1', handle: 'user1', color: 'bg-blue-500', profile: '1', group: 'dev' },
-        { uid: 'user-009', name: '유저 2', handle: 'user2', color: 'bg-blue-500', profile: '2', group: 'dev' },
-        { uid: 'user-002', name: '유저 3', handle: 'user3', color: 'bg-blue-400', profile: '3', group: 'dev' },
-        { uid: 'user-003', name: '유저 4', handle: 'user4', color: 'bg-pink-500', profile: '4', group: 'design' },
-        { uid: 'user-004', name: '유저 5', handle: 'user5', color: 'bg-pink-400', profile: '5', group: 'design' },
-        { uid: 'user-005', name: '유저 6', handle: 'user6', color: 'bg-indigo-500', profile: '6', group: 'marketing' },
-        { uid: 'user-006', name: '유저 7', handle: 'user7', color: 'bg-indigo-400', profile: '7', group: 'marketing' },
-        { uid: 'user-007', name: '유저 8', handle: 'user8', color: 'bg-green-500', profile: '8', group: 'finance' },
-        { uid: 'user-008', name: '유저 9', handle: 'user9', color: 'bg-green-400', profile: '9', group: 'finance' },
-        { uid: 'user-010', name: '유저 10', handle: 'user10', color: 'bg-green-400', profile: '10', group: 'financ' },
-        { uid: 'user-011', name: '유저 11', handle: 'user11', color: 'bg-green-400', profile: '11', group: 'financ' },
-        { uid: 'user-012', name: '유저 12', handle: 'user12', color: 'bg-green-400', profile: '12', group: 'dev' },
-    ];
+const MOCK_GROUPS = [
+    { id: 'dev', name: '에이 팀', icon: 'A' },
+    { id: 'design', name: '비 팀', icon: 'B' },
+    { id: 'marketing', name: '씨 팀', icon: 'C' },
+    { id: 'finance', name: '디 팀', icon: 'D' },
+    { id: 'financ', name: '이 팀', icon: 'E' },
+];
+
+const MOCK_USERS = [
+    { uid: 'user-001', name: '유저 1', handle: 'user1', color: 'bg-gray-500', profile: '1', group: 'dev' },
+    { uid: 'user-002', name: '유저 2', handle: 'user2', color: 'bg-gray-500', profile: '2', group: 'dev' },
+    { uid: 'user-003', name: '유저 3', handle: 'user3', color: 'bg-gray-500', profile: '3', group: 'dev' },
+    { uid: 'user-004', name: '유저 4', handle: 'user4', color: 'bg-gray-500', profile: '4', group: 'dev' },
+    { uid: 'user-005', name: '유저 5', handle: 'user5', color: 'bg-gray-500', profile: '5', group: 'dev' },
+    { uid: 'user-006', name: '유저 6', handle: 'user6', color: 'bg-gray-500', profile: '6', group: 'dev' },
+    { uid: 'user-007', name: '유저 7', handle: 'user7', color: 'bg-gray-500', profile: '7', group: 'dev' },
+    { uid: 'user-008', name: '유저 8', handle: 'user8', color: 'bg-gray-500', profile: '8', group: 'dev' },
+    { uid: 'user-009', name: '유저 9', handle: 'user9', color: 'bg-gray-500', profile: '9', group: 'dev' },
+    { uid: 'user-010', name: '유저 10', handle: 'user10', color: 'bg-gray-500', profile: '10', group: 'dev' },
+    { uid: 'user-011', name: '유저 11', handle: 'user11', color: 'bg-gray-500', profile: '11', group: 'dev' },
+    { uid: 'user-012', name: '유저 12', handle: 'user12', color: 'bg-gray-500', profile: '12', group: 'dev' },
+    { uid: 'user-013', name: '유저 13', handle: 'user13', color: 'bg-gray-500', profile: '13', group: 'design' },
+    { uid: 'user-014', name: '유저 14', handle: 'user14', color: 'bg-gray-500', profile: '14', group: 'design' },
+    { uid: 'user-015', name: '유저 15', handle: 'user15', color: 'bg-gray-500', profile: '15', group: 'design' },
+    { uid: 'user-016', name: '유저 16', handle: 'user16', color: 'bg-gray-500', profile: '16', group: 'marketing' },
+    { uid: 'user-017', name: '유저 17', handle: 'user17', color: 'bg-gray-500', profile: '17', group: 'marketing' },
+    { uid: 'user-018', name: '유저 18', handle: 'user18', color: 'bg-gray-500', profile: '18', group: 'marketing' },
+    { uid: 'user-019', name: '유저 19', handle: 'user19', color: 'bg-gray-500', profile: '19', group: 'marketing' },
+    { uid: 'user-020', name: '유저 20', handle: 'user20', color: 'bg-gray-500', profile: '20', group: 'marketing' },
+    { uid: 'user-021', name: '유저 21', handle: 'user21', color: 'bg-gray-500', profile: '21', group: 'marketing' },
+    { uid: 'user-022', name: '유저 22', handle: 'user22', color: 'bg-gray-500', profile: '22', group: 'marketing' },
+    { uid: 'user-023', name: '유저 23', handle: 'user23', color: 'bg-gray-500', profile: '23', group: 'finance' },
+    { uid: 'user-024', name: '유저 24', handle: 'user24', color: 'bg-gray-500', profile: '24', group: 'finance' },
+    { uid: 'user-025', name: '유저 25', handle: 'user25', color: 'bg-gray-500', profile: '25', group: 'finance' },
+    { uid: 'user-026', name: '유저 26', handle: 'user26', color: 'bg-gray-500', profile: '26', group: 'finance' },
+    { uid: 'user-027', name: '유저 27', handle: 'user27', color: 'bg-gray-500', profile: '27', group: 'finance' },
+    { uid: 'user-028', name: '유저 28', handle: 'user28', color: 'bg-gray-500', profile: '28', group: 'finance' },
+    { uid: 'user-029', name: '유저 29', handle: 'user29', color: 'bg-gray-500', profile: '29', group: 'finance' },
+    { uid: 'user-030', name: '유저 30', handle: 'user30', color: 'bg-gray-500', profile: '30', group: 'financ' },
+    { uid: 'user-031', name: '유저 31', handle: 'user31', color: 'bg-gray-500', profile: '31', group: 'financ' },
+    { uid: 'user-032', name: '유저 32', handle: 'user32', color: 'bg-gray-500', profile: '32', group: 'financ' },
+];
     
     const EXAMPLE_IMAGE_URL = 'https://i.imgur.com/PPzkDE7.png';
     
-    // 🔔 VIEW_OPTIONS에 '알림' 탭 추가
     const VIEW_OPTIONS = [
         { id: 'timeline', name: '타임라인', icon: Home, emptyMessage: '아직 게시물이 없습니다. 첫 번째 트윗을 작성해 보세요!' },
         { id: 'notifications', name: '알림', icon: Bell, emptyMessage: '아직 받은 알림이 없습니다.' },
@@ -149,7 +162,6 @@
         { id: 'bookmarks', name: '북마크', icon: Bookmark, emptyMessage: '북마크한 게시물이 없습니다.' },
     ];
 
-    // 🔔 멘션을 파싱하고 스타일링하는 헬퍼 함수 추가
     const renderContentWithMentions = (content) => {
         if (!content) return '';
         const mentionRegex = /@([a-zA-Z0-9_]+)/g;
@@ -319,7 +331,6 @@
     };
 
     const ReplyModal = ({ post, onReply, onCancel, currentUserProfile, currentUserId }) => {
-        // 🔔 답글 편의성: 자동으로 원본 작성자를 멘션하도록 초기값 설정
         const [replyContent, setReplyContent] = useState(`@${post.authorHandle} `);
         const [imageUrl, setImageUrl] = useState('');
         const [showImageInput, setShowImageInput] = useState(false);
@@ -330,11 +341,10 @@
                 textareaRef.current.style.height = 'auto'; 
                 textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
                 textareaRef.current.focus();
-                // 커서를 멘션 뒤로 이동
                 const len = textareaRef.current.value.length;
                 textareaRef.current.setSelectionRange(len, len);
             }
-        }, []); // 최초 렌더링 시에만 실행
+        }, []);
         
         const formProfile = currentUserProfile || { 
             profile: '👤', 
@@ -380,7 +390,6 @@
                                     <span className="font-bold dark:text-white">{post.authorName}</span>
                                     <span className="text-gray-500 dark:text-gray-400">@{post.authorHandle}</span>
                                 </div>
-                                {/* 🔔 멘션 렌더링 함수 적용 */}
                                 <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{renderContentWithMentions(post.content)}</p>
                                 
                                 {post.imageUrl && (
@@ -639,7 +648,6 @@
                     <span className="font-bold text-xs dark:text-white">{originalPost.authorName}</span>
                     <span className="text-gray-500 dark:text-gray-400 text-xs">@{originalPost.authorHandle}</span>
                 </div>
-                {/* 🔔 멘션 렌더링 함수 적용 */}
                 <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap line-clamp-3">{renderContentWithMentions(originalPost.content)}</p>
                 {originalPost.imageUrl && (
                     <div className="mt-2 max-h-40 overflow-hidden rounded-xl">
@@ -654,11 +662,14 @@
         );
     };
 
-    const PostItem = ({ post, nestedLevel = 0, onThreadSelect, onRequestDelete, onEditPost, onNewPostAnimated, newPostId, posts, isMainTimeline = false, onToggleLike, onToggleBookmark, onRetweetAction, onReplyClick }) => {
-        const [isEditing, setIsEditing] = useState(false); 
-        const [editContent, setEditContent] = useState(post.content); 
-        const [isFlashing, setIsFlashing] = useState(false); 
-        const [showRetweetMenu, setShowRetweetMenu] = useState(false); 
+    const PostItem = (props) => {
+        const { post, onThreadSelect, onRequestDelete, onEditPost, onNewPostAnimated, newPostId, posts, onToggleLike, onToggleBookmark, onRetweetAction, onReplyClick, 
+                isThreadView = false, isMainFocus = false, isPreview = false, drawTopLine, drawBottomLine, isTimelinePreview = false, isTimelineParent = false } = props;
+
+        const [isEditing, setIsEditing] = useState(false);
+        const [editContent, setEditContent] = useState(post.content);
+        const [isFlashing, setIsFlashing] = useState(false);
+        const [showRetweetMenu, setShowRetweetMenu] = useState(false);
         const hasFlashed = useRef(false);
 
         const originalPost = posts.find(p => p.id === post.retweetedPostId);
@@ -666,24 +677,23 @@
         const isSimpleRetweet = isRetweet && !post.content && !post.replyToId;
 
         const isAuthor = post.authorId === App.currentUserId;
-        const MessageIcon = MessageSquare; 
-        
+        const MessageIcon = MessageSquare;
+
         const targetPostId = isSimpleRetweet && originalPost ? originalPost.id : post.id;
-        
         const sourcePostForReactions = isSimpleRetweet && originalPost ? originalPost : post;
 
         const isLiked = sourcePostForReactions.likes?.includes(App.currentUserId);
         const isBookmarked = sourcePostForReactions.bookmarks?.includes(App.currentUserId);
-        
+
         const retweetsCount = posts.filter(p => p.retweetedPostId === post.id).length;
-        
-        const isRetweetedByCurrentUser = posts.some(p => 
-            p.retweetedPostId === post.id && 
-            !p.content && 
-            !p.replyToId && 
+
+        const isRetweetedByCurrentUser = posts.some(p =>
+            p.retweetedPostId === post.id &&
+            !p.content &&
+            !p.replyToId &&
             p.authorId === App.currentUserId
         );
-        
+
         const postProfile = isSimpleRetweet && originalPost ? {
             name: originalPost.authorName,
             handle: originalPost.authorHandle,
@@ -695,21 +705,21 @@
             handle: post.authorHandle,
             color: post.authorColor,
             profile: post.authorProfile,
-            profileImageUrl: post.authorImageUrl, 
+            profileImageUrl: post.authorImageUrl,
         };
 
         useEffect(() => {
             if (post.id === newPostId && !hasFlashed.current) {
-                setIsFlashing(true); 
-                hasFlashed.current = true; 
+                setIsFlashing(true);
+                hasFlashed.current = true;
                 const timer = setTimeout(() => {
-                    setIsFlashing(false); 
-                    if (onNewPostAnimated) onNewPostAnimated(); 
-                }, 1500); 
+                    setIsFlashing(false);
+                    if (onNewPostAnimated) onNewPostAnimated();
+                }, 1500);
                 return () => clearTimeout(timer);
             }
             if (newPostId === null && isFlashing) {
-                 setIsFlashing(false);
+                setIsFlashing(false);
             }
         }, [newPostId, post.id, onNewPostAnimated, isFlashing]);
 
@@ -720,261 +730,253 @@
                 setIsEditing(false);
             }
         };
+
+        const replies = useMemo(() => posts
+            .filter(p => p.replyToId === post.id)
+            .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()), [posts, post.id]);
         
-        const replies = posts
-          .filter(p => p.replyToId === post.id)
-          .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()); 
-          
-        const isReplyLimitActive = isMainTimeline && replies.length > 2 && nestedLevel === 0;
-        
-        const visibleReplies = isReplyLimitActive 
-            ? replies.slice(-2)
-            : replies;
-            
-        const hiddenReplyCount = isReplyLimitActive ? replies.length - 2 : 0;
-        
-        const shouldRenderReplies = useMemo(() => {
-            if (replies.length === 0) return false;
-            if (isMainTimeline) {
-                return nestedLevel === 0;
-            } else {
-                return nestedLevel < 1;
-            }
-        }, [replies.length, isMainTimeline, nestedLevel]);
+        const hasReplies = replies.length > 0;
         
         const animationClass = isFlashing ? 'animate-pulse-once dark:animate-dark-pulse-once bg-blue-50 dark:bg-blue-900/50' : '';
 
         const handlePostClick = (e) => {
-             const isActionElement = e.target.tagName === 'BUTTON' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT' || e.target.tagName === 'A' || e.target.closest('button') || e.target.closest('.retweet-menu');
-             
-             if (!isActionElement) {
-                 const targetThreadId = (isRetweet && originalPost) ? originalPost.id : post.id;
-                 onThreadSelect(targetThreadId);
-             }
+             // Allow clicks on timeline previews to navigate
+            if (isTimelineParent || isTimelinePreview) {
+                 // The parent container has the onClick handler, so we let it propagate
+                return;
+            }
+
+            if (isMainFocus || isPreview) return; 
+
+            const isActionElement = e.target.tagName === 'BUTTON' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT' || e.target.tagName === 'A' || e.target.closest('button') || e.target.closest('.retweet-menu');
+
+            if (!isActionElement) {
+                const targetThreadId = (isRetweet && originalPost) ? originalPost.id : post.id;
+                onThreadSelect(targetThreadId);
+            }
         };
 
         const handleRetweetMenuAction = (e, actionType) => {
             e.stopPropagation();
-            onRetweetAction(post, actionType); 
+            onRetweetAction(post, actionType);
             setShowRetweetMenu(false);
         };
 
         const handleReplyButtonClick = (e) => {
             e.stopPropagation();
             if (App.currentUserId) {
-                 onReplyClick(post);
+                onReplyClick(post);
             }
         };
+        
+        const finalDrawTopLine = drawTopLine !== undefined ? drawTopLine : props.hasParent;
+        const finalDrawBottomLine = drawBottomLine !== undefined ? drawBottomLine : hasReplies;
 
         return (
-          <div className={`border-b border-gray-100 dark:border-gray-800 ${nestedLevel > 0 ? 'pl-8' : ''}`}>
-            
-            {isSimpleRetweet && originalPost && (
-                <div className="flex items-center text-green-500 text-xs font-semibold px-4 pt-2 dark:text-green-400 cursor-default">
-                    {typeof RepeatIcon === 'string' ? <span className="mr-1 text-sm">{RepeatIcon}</span> : <RepeatIcon size={14} className="mr-1" />}
-                    <span>{post.authorName}님이 리트윗했습니다.</span>
-                </div>
-            )}
-
-            <div 
-                className={`p-4 transition ${animationClass} cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800`}
-                onClick={handlePostClick}
-            >
-              <div className="flex items-start">
-                <div className="mr-3 flex-shrink-0">
-                    <ProfilePictureDisplay 
-                        profile={postProfile} 
-                        sizeClass="w-10 h-10" 
-                        textSizeClass="text-lg" 
-                    />
-                </div>
-                
-                <div className="flex-grow">
-                  <div className="flex items-center justify-between space-x-1 text-sm">
-                    <div className="flex items-center space-x-1">
-                        <span className="font-bold dark:text-white">
-                            {isSimpleRetweet && originalPost ? originalPost.authorName : post.authorName}
-                        </span>
-                        <span className="text-gray-500 dark:text-gray-400">
-                            @{isSimpleRetweet && originalPost ? originalPost.authorHandle : post.authorHandle}
-                        </span>
-                        <span className="text-gray-500 dark:text-gray-400">· {formatTimestamp(post.timestamp)}</span>
-                        {post.editedAt && <span className="text-xs text-gray-400 italic">(수정됨)</span>}
-                    </div>
-                    
-                    {isAuthor && !isSimpleRetweet && ( 
-                        <div className="flex space-x-2">
-                            <button 
-                                onClick={(e) => {e.stopPropagation(); setIsEditing(true);}}
-                                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition disabled:opacity-50 font-medium rounded p-1"
-                                disabled={isEditing}
-                            >
-                                수정
-                            </button>
-                            <button 
-                                onClick={(e) => {e.stopPropagation(); onRequestDelete(post.id);}}
-                                className="text-xs text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition font-medium rounded p-1"
-                            >
-                                삭제
-                            </button>
-                        </div>
-                    )}
-                  </div>
-                  
-                  {isEditing ? (
-                      <div className="mt-2 flex flex-col space-y-2" onClick={(e) => e.stopPropagation()}>
-                          <textarea
-                              value={editContent}
-                              onChange={(e) => setEditContent(e.target.value)}
-                              className="w-full p-2 text-sm border border-blue-400 rounded-lg focus:outline-none dark:bg-gray-700 dark:text-gray-100 resize-none"
-                              rows="3"
-                          />
-                          <div className="flex justify-end space-x-2">
-                              <button
-                                  onClick={(e) => {e.stopPropagation(); setIsEditing(false);}}
-                                  className="px-3 py-1 text-sm text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-100"
-                              >
-                                  취소
-                              </button>
-                              <button
-                                  onClick={(e) => {e.stopPropagation(); handleSaveEdit();}}
-                                  className="px-3 py-1 text-sm bg-blue-500 text-white rounded-full hover:bg-blue-600 transition disabled:opacity-50"
-                                  disabled={editContent.trim() === post.content.trim() || editContent.trim() === ""}
-                              >
-                                  저장
-                              </button>
-                          </div>
-                      </div>
-                  ) : (
-                      <>
-                        {/* 🔔 멘션 렌더링 함수 적용 */}
-                        {isSimpleRetweet && originalPost ? (
-                            <p className="mt-1 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{renderContentWithMentions(originalPost.content)}</p>
-                        ) : (
-                            <>
-                                <p className="mt-1 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{renderContentWithMentions(post.content)}</p>
-                                
-                                {post.imageUrl && !isSimpleRetweet && (
-                                    <div className="mt-3 max-h-96 overflow-hidden rounded-xl">
-                                        <img 
-                                            src={post.imageUrl} 
-                                            alt="첨부 이미지" 
-                                            className="w-full h-auto object-cover border border-gray-300 dark:border-gray-600"
-                                            onError={(e) => {e.target.style.display='none';}}
-                                        />
-                                    </div>
-                                )}
-                                {originalPost && !isSimpleRetweet && <QuotedPost originalPost={originalPost} onThreadSelect={onThreadSelect} />}
-                            </>
-                        )}
-                      </>
-                  )}
-                  
-                  <div className="flex mt-3 text-gray-500 dark:text-gray-400 text-sm space-x-6">
-                    <button 
-                      onClick={handleReplyButtonClick}
-                      className="flex items-center space-x-1 hover:text-blue-500 transition"
-                      disabled={!App.currentUserId} 
-                    >
-                      {typeof MessageIcon === 'string' ? <span className="text-base">{MessageIcon}</span> : <MessageIcon size={16} />}
-                      <span>{replies.length > 0 ? replies.length : ''}</span>
-                    </button>
-
-                    <div className="relative">
-                        <button
-                            onClick={(e) => {e.stopPropagation(); setShowRetweetMenu(!showRetweetMenu);}}
-                            className={`flex items-center space-x-1 transition disabled:opacity-50 ${isRetweetedByCurrentUser ? 'text-green-500 hover:text-green-600' : 'hover:text-green-500'}`}
-                            disabled={!App.currentUserId}
-                        >
-                            {typeof RepeatIcon === 'string' 
-                                ? <span className="text-base">{RepeatIcon}</span> 
-                                : <RepeatIcon size={16} fill={isRetweetedByCurrentUser ? 'currentColor' : 'none'} className={isRetweetedByCurrentUser ? 'text-green-500' : ''} />
-                            }
-                            <span>{retweetsCount > 0 ? retweetsCount : ''}</span>
-                        </button>
-                        
-                        {showRetweetMenu && (
-                            <div className="retweet-menu absolute left-0 bottom-full mb-2 w-48 bg-white dark:bg-gray-700 rounded-xl shadow-xl border border-gray-200 dark:border-gray-600 z-10 overflow-hidden" onClick={e => e.stopPropagation()}>
-                                <button
-                                    onClick={(e) => handleRetweetMenuAction(e, 'RT')}
-                                    className={`w-full text-left px-4 py-2 text-sm transition ${isRetweetedByCurrentUser ? 'text-red-500 hover:bg-red-50 dark:hover:bg-gray-600/50 font-bold' : 'text-green-500 hover:bg-green-50 dark:hover:bg-gray-600/50'}`}
-                                >
-                                    {isRetweetedByCurrentUser ? '리트윗 취소' : '리트윗하기 (Simple RT)'}
-                                </button>
-                                <button
-                                    onClick={(e) => handleRetweetMenuAction(e, 'QT')}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
-                                >
-                                    인용하여 트윗하기 (Quote Tweet)
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    <button
-                        onClick={(e) => {e.stopPropagation(); onToggleLike(targetPostId);}}
-                        className={`flex items-center space-x-1 transition disabled:opacity-50 ${isLiked ? 'text-red-500 hover:text-red-600' : 'hover:text-red-500'}`}
-                        disabled={!App.currentUserId}
-                    >
-                        {typeof Heart === 'string' 
-                            ? <span className="text-base">{isLiked ? '❤️' : '🤍'}</span> 
-                            : <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} className={isLiked ? 'text-red-500' : ''} />
-                        }
-                        <span>{sourcePostForReactions.likes?.length > 0 ? sourcePostForReactions.likes.length : ''}</span>
-                    </button>
-
-                    <button
-                        onClick={(e) => {e.stopPropagation(); onToggleBookmark(targetPostId);}}
-                        className={`flex items-center space-x-1 transition disabled:opacity-50 ${isBookmarked ? 'text-blue-500 hover:text-blue-600' : 'hover:text-blue-500'}`}
-                        disabled={!App.currentUserId}
-                    >
-                        {typeof Bookmark === 'string' 
-                            ? <span className="text-base">{isBookmarked ? '★' : '☆'}</span> 
-                            : <Bookmark size={16} fill={isBookmarked ? 'currentColor' : 'none'} className={isBookmarked ? 'text-blue-500' : ''} />
-                        }
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {shouldRenderReplies && (
-              <div className="border-l-2 border-blue-200 ml-5 dark:border-blue-700">
-                {visibleReplies.map(reply => (
-                  <PostItem 
-                    key={reply.id} 
-                    post={reply} 
-                    nestedLevel={nestedLevel + 1} 
-                    onEditPost={onEditPost} 
-                    onRequestDelete={onRequestDelete}
-                    onThreadSelect={onThreadSelect}
-                    onNewPostAnimated={onNewPostAnimated}
-                    newPostId={newPostId}
-                    posts={posts} 
-                    isMainTimeline={isMainTimeline} 
-                    onToggleLike={onToggleLike} 
-                    onToggleBookmark={onToggleBookmark}
-                    onRetweetAction={onRetweetAction}
-                    onReplyClick={onReplyClick}
-                  />
-                ))}
-                
-                {hiddenReplyCount > 0 && isMainTimeline && nestedLevel === 0 && (
-                    <div 
-                        className="p-2 ml-5 text-sm font-semibold text-blue-500 hover:text-blue-600 cursor-pointer" 
-                        onClick={() => onThreadSelect(post.id)}
-                    >
-                        답글 {hiddenReplyCount}개 더 보기...
+            <div className={isTimelinePreview || isTimelineParent ? '' : `border-b border-gray-100 dark:border-gray-800`}>
+                {isSimpleRetweet && originalPost && (
+                    <div className="flex items-center text-green-500 text-xs font-semibold px-4 pt-2 dark:text-green-400 cursor-default">
+                        {typeof RepeatIcon === 'string' ? <span className="mr-1 text-sm">{RepeatIcon}</span> : <RepeatIcon size={14} className="mr-1" />}
+                        <span>{post.authorName}님이 리트윗했습니다.</span>
                     </div>
                 )}
-              </div>
-            )}
-          </div>
+                <div
+                    className={`transition ${animationClass} ${isMainFocus || isPreview ? '' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                    onClick={handlePostClick}
+                >
+                    <div className={`flex items-start ${isTimelinePreview ? 'pb-4' : 'p-4'}`}>
+                        <div className="mr-3 flex-shrink-0 flex flex-col items-center relative">
+                            {finalDrawTopLine && (
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
+                            )}
+                            <ProfilePictureDisplay
+                                profile={postProfile}
+                                sizeClass={isMainFocus ? 'w-12 h-12' : 'w-10 h-10'}
+                                textSizeClass={isMainFocus ? 'text-xl' : 'text-lg'}
+                            />
+                            {finalDrawBottomLine && (
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 w-px h-full bg-gray-300 dark:bg-gray-600"></div>
+                            )}
+                        </div>
+                        
+
+                        <div className="flex-grow">
+                            <div className="flex items-center justify-between">
+                                {isMainFocus ? (
+                                    <div className="flex flex-col">
+                                        <span className="font-bold dark:text-white truncate text-lg">
+                                            {isSimpleRetweet && originalPost ? originalPost.authorName : post.authorName}
+                                        </span>
+                                        <span className="text-gray-500 dark:text-gray-400 truncate text-sm">
+                                            @{isSimpleRetweet && originalPost ? originalPost.authorHandle : post.authorHandle}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
+                                        <span className="font-bold text-gray-800 dark:text-white text-sm truncate">
+                                            {isSimpleRetweet && originalPost ? originalPost.authorName : post.authorName}
+                                        </span>
+                                        <span className="truncate">
+                                            @{isSimpleRetweet && originalPost ? originalPost.authorHandle : post.authorHandle}
+                                        </span>
+                                        <span>·</span>
+                                        <span>{formatTimestamp(new Date(post.timestamp))}</span>
+                                        {post.editedAt && <span className="italic text-xs">(수정됨)</span>}
+                                    </div>
+                                )}
+
+                                {isAuthor && !isSimpleRetweet && !isPreview &&(
+                                    <div className="flex space-x-2 flex-shrink-0 ml-auto pl-2">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
+                                            className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition disabled:opacity-50 font-medium rounded p-1"
+                                            disabled={isEditing}
+                                        >
+                                            수정
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); onRequestDelete(post.id); }}
+                                            className="text-xs text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition font-medium rounded p-1"
+                                        >
+                                            삭제
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {isEditing ? (
+                                <div className="mt-2 flex flex-col space-y-2" onClick={(e) => e.stopPropagation()}>
+                                    <textarea
+                                        value={editContent}
+                                        onChange={(e) => setEditContent(e.target.value)}
+                                        className="w-full p-2 text-sm border border-blue-400 rounded-lg focus:outline-none dark:bg-gray-700 dark:text-gray-100 resize-none"
+                                        rows="3"
+                                    />
+                                    <div className="flex justify-end space-x-2">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setIsEditing(false); }}
+                                            className="px-3 py-1 text-sm text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-100"
+                                        >
+                                            취소
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleSaveEdit(); }}
+                                            className="px-3 py-1 text-sm bg-blue-500 text-white rounded-full hover:bg-blue-600 transition disabled:opacity-50"
+                                            disabled={editContent.trim() === post.content.trim() || editContent.trim() === ""}
+                                        >
+                                            저장
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    {isSimpleRetweet && originalPost ? (
+                                        <p className={`text-gray-800 dark:text-gray-200 whitespace-pre-wrap ${isMainFocus ? 'text-xl my-3' : 'mt-1 text-sm'}`}>{renderContentWithMentions(originalPost.content)}</p>
+                                    ) : (
+                                        <>
+                                            <p className={`text-gray-800 dark:text-gray-200 whitespace-pre-wrap ${isMainFocus ? 'text-xl my-3' : 'mt-1 text-sm'}`}>{renderContentWithMentions(post.content)}</p>
+
+                                            {post.imageUrl && !isSimpleRetweet && (
+                                                <div className={`mt-3 ${isMainFocus ? 'max-h-80' : 'max-h-96'} overflow-hidden rounded-xl`}>
+                                                    <img
+                                                        src={post.imageUrl}
+                                                        alt="첨부 이미지"
+                                                        className="w-full h-auto object-cover border border-gray-300 dark:border-gray-600"
+                                                        onError={(e) => { e.target.style.display = 'none'; }}
+                                                    />
+                                                </div>
+                                            )}
+                                            {originalPost && !isSimpleRetweet && <QuotedPost originalPost={originalPost} onThreadSelect={onThreadSelect} />}
+                                        </>
+                                    )}
+                                </>
+                            )}
+                            
+                            {isMainFocus && (
+                                <div className="mt-2 border-y border-gray-200 dark:border-gray-700 py-2">
+                                    <span className="text-gray-500 dark:text-gray-400 flex-shrink-0 text-sm">
+                                        {new Date(post.timestamp).toLocaleString('ko-KR')}
+                                    </span>
+                                    {post.editedAt && <span className="italic text-sm">(수정됨)</span>}
+                                </div>
+                            )}
+
+                            {!isTimelineParent && (
+                                <div className={`flex text-gray-500 dark:text-gray-400 space-x-6 ${isMainFocus ? 'mt-2 text-base' : 'mt-3 text-sm'}`}>
+                                    <button
+                                        onClick={handleReplyButtonClick}
+                                        className="flex items-center space-x-1 hover:text-blue-500 transition"
+                                        disabled={!App.currentUserId}
+                                    >
+                                        {typeof MessageIcon === 'string' ? <span>{MessageIcon}</span> : <MessageIcon size={isMainFocus ? 20 : 16} />}
+                                        <span>{replies.length > 0 ? replies.length : ''}</span>
+                                    </button>
+
+                                    <div className="relative">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setShowRetweetMenu(!showRetweetMenu); }}
+                                            className={`flex items-center space-x-1 transition disabled:opacity-50 ${isRetweetedByCurrentUser ? 'text-green-500 hover:text-green-600' : 'hover:text-green-500'}`}
+                                            disabled={!App.currentUserId}
+                                        >
+                                            {typeof RepeatIcon === 'string'
+                                                ? <span>{RepeatIcon}</span>
+                                                : <RepeatIcon size={isMainFocus ? 20 : 16} className={isRetweetedByCurrentUser ? 'text-green-500' : ''} />
+                                            }
+                                            <span>{retweetsCount > 0 ? retweetsCount : ''}</span>
+                                        </button>
+
+                                        {showRetweetMenu && (
+                                            <div className="retweet-menu absolute left-0 bottom-full mb-2 w-48 bg-white dark:bg-gray-700 rounded-xl shadow-xl border border-gray-200 dark:border-gray-600 z-10 overflow-hidden" onClick={e => e.stopPropagation()}>
+                                                <button
+                                                    onClick={(e) => handleRetweetMenuAction(e, 'RT')}
+                                                    className={`w-full text-left px-4 py-2 text-sm transition ${isRetweetedByCurrentUser ? 'text-red-500 hover:bg-red-50 dark:hover:bg-gray-600/50 font-bold' : 'text-green-500 hover:bg-green-50 dark:hover:bg-gray-600/50'}`}
+                                                >
+                                                    {isRetweetedByCurrentUser ? '리트윗 취소' : '리트윗하기'}
+                                                </button>
+                                                <button
+                                                    onClick={(e) => handleRetweetMenuAction(e, 'QT')}
+                                                    className="w-full text-left px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
+                                                >
+                                                    인용하여 트윗하기
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onToggleLike(targetPostId); }}
+                                        className={`flex items-center space-x-1 transition disabled:opacity-50 ${isLiked ? 'text-red-500 hover:text-red-600' : 'hover:text-red-500'}`}
+                                        disabled={!App.currentUserId}
+                                    >
+                                        {typeof Heart === 'string'
+                                            ? <span>{isLiked ? '❤️' : '🤍'}</span>
+                                            : <Heart size={isMainFocus ? 20 : 16} fill={isLiked ? 'currentColor' : 'none'} className={isLiked ? 'text-red-500' : ''} />
+                                        }
+                                        <span>{sourcePostForReactions.likes?.length > 0 ? sourcePostForReactions.likes.length : ''}</span>
+                                    </button>
+
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onToggleBookmark(targetPostId); }}
+                                        className={`flex items-center space-x-1 transition disabled:opacity-50 ${isBookmarked ? 'text-blue-500 hover:text-blue-600' : 'hover:text-blue-500'}`}
+                                        disabled={!App.currentUserId}
+                                    >
+                                        {typeof Bookmark === 'string'
+                                            ? <span>{isBookmarked ? '★' : '☆'}</span>
+                                            : <Bookmark size={isMainFocus ? 20 : 16} fill={isBookmarked ? 'currentColor' : 'none'} className={isBookmarked ? 'text-blue-500' : ''} />
+                                        }
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
         );
     };
 
-    const ReplyForm = ({ parentId, onReply, isMainPost = false, currentUserProfile, currentUserId }) => {
-        const [replyContent, setReplyContent] = useState('');
+    const ReplyForm = ({ parentId, onReply, isMainPost = false, currentUserProfile, currentUserId, parentAuthorHandle }) => {
+        const initialContent = !isMainPost && parentAuthorHandle ? `@${parentAuthorHandle} ` : '';
+        const [replyContent, setReplyContent] = useState(initialContent);
         const [imageUrl, setImageUrl] = useState('');
         const [showImageInput, setShowImageInput] = useState(false);
         const textareaRef = useRef(null); 
@@ -986,6 +988,14 @@
             }
         }, [replyContent]);
         
+        useEffect(() => {
+            if (!isMainPost && textareaRef.current) {
+                textareaRef.current.focus();
+                const len = textareaRef.current.value.length;
+                textareaRef.current.setSelectionRange(len, len);
+            }
+        }, [isMainPost, parentId]); // parentId 변경 시에도 포커스
+
         const formProfile = currentUserProfile || { 
             profile: '👤', 
             color: 'bg-gray-500', 
@@ -996,7 +1006,7 @@
         const handleReplySubmit = (e) => {
             e.preventDefault();
             onReply(replyContent, parentId, null, imageUrl.trim()); 
-            setReplyContent('');
+            setReplyContent(isMainPost ? '' : initialContent);
             setImageUrl('');
             setShowImageInput(false);
         };
@@ -1004,24 +1014,24 @@
         if (!currentUserId && !isMainPost) return null; 
 
         return (
-          <form onSubmit={handleReplySubmit} className={`flex flex-col ${isMainPost ? 'px-4 pb-4' : 'pl-12 pr-4'}`}>
+          <form onSubmit={handleReplySubmit} className={`flex flex-col ${isMainPost ? 'px-4 pb-4' : 'px-4 py-3'}`}>
             <div className="flex">
                 <div className="mr-3 flex-shrink-0">
-                    <ProfilePictureDisplay profile={formProfile} sizeClass="w-8 h-8 mt-2" textSizeClass="text-sm" />
+                    <ProfilePictureDisplay profile={formProfile} sizeClass="w-10 h-10" textSizeClass="text-lg" />
                 </div>
                 <textarea
                     ref={textareaRef}
                     value={replyContent}
                     onChange={(e) => setReplyContent(e.target.value)}
-                    placeholder={isMainPost ? "지금 무슨 일이 일어나고 있나요?" : "@" + (formProfile.handle) + "님에게 답글 달기..."}
-                    className="flex-grow p-2 text-sm border-b border-gray-200 focus:outline-none focus:border-blue-400 dark:bg-gray-800 mt-2 dark:border-gray-600 dark:text-gray-100 resize-none overflow-hidden"
+                    placeholder={isMainPost ? "지금 무슨 일이 일어나고 있나요?" : "답글을 게시하세요."}
+                    className="flex-grow p-2 text-base bg-transparent focus:outline-none dark:text-gray-100 resize-none overflow-hidden"
                     rows="1"
                     disabled={!currentUserId}
                     maxLength="280" 
                 />
             </div>
 
-            <div className="flex flex-col pl-11 pt-2">
+            <div className="flex flex-col pl-12 pt-2">
                 <div className="flex items-center justify-between mt-1">
                     <button
                         type="button"
@@ -1033,7 +1043,7 @@
                     </button>
                     <button
                       type="submit"
-                      className="ml-2 px-3 py-1 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition disabled:opacity-50 font-semibold"
+                      className="ml-2 px-4 py-1.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition disabled:opacity-50 font-semibold text-sm"
                       disabled={!currentUserId || (replyContent.trim() === "" && imageUrl.trim() === "")}
                     >
                       {isMainPost ? '게시' : '답글'}
@@ -1069,10 +1079,84 @@
                     </div>
                 )}
             </div>
-
           </form>
         );
     };
+
+const RecursiveReplies = ({ parentId, allPostProps, posts, postsWithChildren }) => {
+    const childReplies = useMemo(() => 
+        posts.filter(p => p.replyToId === parentId)
+             .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()),
+        [parentId, posts]
+    );
+
+    return (
+        <>
+            {childReplies.map((reply, index) => {
+                const hasChildren = postsWithChildren.has(reply.id);
+                const hasSiblingAfter = index < childReplies.length - 1;
+
+                return (
+                    <div key={reply.id}>
+                        <PostItem
+                            {...allPostProps}
+                            post={reply}
+                            isThreadView={true}
+                            drawTopLine={true}
+                            drawBottomLine={hasChildren || hasSiblingAfter}
+                        />
+                        {hasChildren && <RecursiveReplies parentId={reply.id} allPostProps={allPostProps} posts={posts} postsWithChildren={postsWithChildren}/>}
+                    </div>
+                )
+            })}
+        </>
+    );
+};
+
+const ExpandableReply = ({ reply, index, replies, allPostProps, posts, postsWithChildren }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const hasChildren = postsWithChildren.has(reply.id);
+    const hasSiblingAfter = index < replies.length - 1;
+
+    const countDescendants = useCallback((postId) => {
+        const children = posts.filter(p => p.replyToId === postId);
+        let count = children.length;
+        children.forEach(child => {
+            count += countDescendants(child.id);
+        });
+        return count;
+    }, [posts]);
+
+    const descendantCount = useMemo(() => hasChildren ? countDescendants(reply.id) : 0, [hasChildren, reply.id, countDescendants]);
+
+
+    return (
+        <div>
+            <PostItem
+                {...allPostProps}
+                post={reply}
+                isThreadView={true}
+                drawTopLine={true}
+                drawBottomLine={hasChildren || hasSiblingAfter}
+            />
+            {hasChildren && !isExpanded && (
+                <div className="pb-2" onClick={(e) => { e.stopPropagation(); setIsExpanded(true); }}>
+                    <div className="relative pt-1 ml-16 cursor-pointer">
+                        <div className="absolute left-[-26px] top-[-4px] text-center w-5">
+                            <span className="text-gray-400 dark:text-gray-600 text-lg leading-none">:</span>
+                        </div>
+                        <span className="text-sm font-semibold text-blue-500 hover:text-blue-600">
+                           {`답글 ${descendantCount}개 보기`}
+                        </span>
+                    </div>
+                </div>
+            )}
+            {hasChildren && isExpanded && (
+                 <RecursiveReplies parentId={reply.id} allPostProps={allPostProps} posts={posts} postsWithChildren={postsWithChildren}/>
+            )}
+        </div>
+    );
+};
 
 
 const App = () => {
@@ -1096,7 +1180,6 @@ const App = () => {
         const [activeView, setActiveView] = useState('timeline'); 
         const [postToRetweet, setPostToRetweet] = useState(null); 
         const [replyToPost, setReplyToPost] = useState(null); 
-        // 🔔 알림 관련 state 추가
         const [lastCheckedNotifications, setLastCheckedNotifications] = useState(null);
         
         const { getDoc, doc, onSnapshot, setDoc, collection } = window.firebase || {};
@@ -1106,14 +1189,12 @@ const App = () => {
             [currentUserId]
         );
 
-        // 🔔 멘션 처리를 위해 사용자의 아이디(handle)와 uid를 매핑하는 객체 생성
         const handleToUidMap = useMemo(() => {
             const map = {};
             MOCK_USERS.forEach(user => {
                 const customProfile = allCustomProfiles[user.uid];
-                // 커스텀 핸들이 있으면 그것을, 없으면 기본 핸들을 사용
                 const handle = customProfile?.handle || user.handle;
-                map[handle] = user.uid;
+                map[handle.toLowerCase()] = user.uid;
             });
             return map;
         }, [allCustomProfiles]);
@@ -1138,6 +1219,12 @@ const App = () => {
             [activeGroup]
         );
         
+        const handleThreadSelect = (postId) => {
+            if (postId) {
+                setSelectedPostIdForThread(postId);
+            }
+        };
+        
         const handleProfileSave = useCallback(async ({ name, handle, profileImageUrl }) => {
             if (!db || !currentUserId) return;
             try {
@@ -1158,6 +1245,7 @@ const App = () => {
             setCurrentUserId(null); 
             localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
             setActiveView('timeline'); 
+            setSelectedPostIdForThread(null);
         };
         
         const toggleProfileSelector = () => {
@@ -1172,6 +1260,7 @@ const App = () => {
                 localStorage.setItem(ACTIVE_USER_STORAGE_KEY, user.uid);
                 setIsProfileSelectorOpen(false); 
                 setActiveView('timeline'); 
+                setSelectedPostIdForThread(null);
             }
         };
 
@@ -1294,7 +1383,6 @@ const App = () => {
             return () => unsubscribe();
         }, [db, isLoading]);
 
-        // 🔔 알림 확인 시간을 LocalStorage에서 불러오는 로직 (사용자별로 관리)
         useEffect(() => {
             if (currentUserId) {
                 const storedTime = localStorage.getItem(`${LAST_CHECKED_NOTIFICATIONS_KEY}_${currentUserId}`);
@@ -1316,7 +1404,7 @@ const App = () => {
                     bookmarks: doc.data().bookmarks || [], 
                     retweetedPostId: doc.data().retweetedPostId || null,
                     imageUrl: doc.data().imageUrl || null,
-                    mentions: doc.data().mentions || [], // 🔔 Firestore에서 mentions 필드를 가져오도록 추가
+                    mentions: doc.data().mentions || [],
                 }));
                 
                 const sortedPosts = fetchedPosts.sort((a, b) => {
@@ -1349,13 +1437,12 @@ const App = () => {
                 uid: currentUserId, name: "Anonymous User", handle: "anonymous", color: "bg-gray-500", profile: "👤", profileImageUrl: '' 
             };
             
-            // 🔔 멘션 파싱 로직 추가
             const mentionRegex = /@([a-zA-Z0-9_]+)/g;
-            const mentions = new Set(); // 중복 멘션 방지를 위해 Set 사용
+            const mentions = new Set();
             let match;
             while ((match = mentionRegex.exec(content)) !== null) {
-                const handle = match[1];
-                if (handleToUidMap[handle]) { // 유효한 사용자인지 확인
+                const handle = match[1].toLowerCase();
+                if (handleToUidMap[handle]) {
                     mentions.add(handleToUidMap[handle]);
                 }
             }
@@ -1396,7 +1483,7 @@ const App = () => {
                     timestamp: serverTimestamp(),
                     likes: [], 
                     bookmarks: [],
-                    mentions: Array.from(mentions), // 🔔 멘션된 사용자 uid 배열을 Firestore에 저장
+                    mentions: Array.from(mentions),
                 });
                 
                 if (replyToId && rootPostId) {
@@ -1410,7 +1497,6 @@ const App = () => {
                 console.error("게시 실패:", e);
             }
         }, [db, currentUserId, currentUserProfile, getDoc, handleToUidMap]);
-        App.handlePost = handlePost;
         
         const handleRetweetAction = useCallback(async (targetPost, actionType) => {
             if (!currentUserId || !targetPost) return;
@@ -1532,13 +1618,11 @@ const App = () => {
             }
         }, [db, currentUserId]);
 
-
-        // 🔔 멘션된 게시물과 안 읽은 멘션 수 계산 로직 추가
         const mentionPosts = useMemo(() => {
             if (!currentUserId) return [];
             return posts
                 .filter(p => p.mentions?.includes(currentUserId))
-                .sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()); // 최신순 정렬
+                .sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime());
         }, [posts, currentUserId]);
 
         const unreadMentionCount = useMemo(() => {
@@ -1547,24 +1631,79 @@ const App = () => {
         }, [mentionPosts, lastCheckedNotifications]);
 
 
-        const displayPosts = useMemo(() => {
-            if (selectedPostIdForThread) return []; 
-            const rootPosts = posts.filter(p => !p.replyToId);
+        const displayItems = useMemo(() => {
+            if (selectedPostIdForThread) return [];
+
             if (activeView === 'likes') {
                 if (!currentUserId) return [];
-                return rootPosts.filter(p => p.likes?.includes(currentUserId) && !p.retweetedPostId);
+                return posts.filter(p => p.likes?.includes(currentUserId))
+                            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
             }
             if (activeView === 'bookmarks') {
                 if (!currentUserId) return [];
-                return rootPosts.filter(p => p.bookmarks?.includes(currentUserId) && !p.retweetedPostId);
+                return posts.filter(p => p.bookmarks?.includes(currentUserId))
+                            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
             }
-            // 🔔 '알림' 탭이 선택되었을 때 멘션된 게시물 목록을 보여주도록 추가
             if (activeView === 'notifications') {
                 return mentionPosts;
             }
-            return rootPosts;
+
+            if (activeView === 'timeline') {
+                const postsById = new Map(posts.map(p => [p.id, p]));
+                
+                const timelineActivities = posts
+                    .filter(p => !(p.retweetedPostId && !p.content && !p.replyToId))
+                    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+                return timelineActivities.map(activity => {
+                    if (activity.replyToId) {
+                        const parent = postsById.get(activity.replyToId);
+                        if (parent) {
+                            return {
+                                isReplyActivity: true,
+                                parentPost: parent,
+                                activityPost: activity,
+                                id: activity.id,
+                            };
+                        }
+                    }
+                    return {
+                        isReplyActivity: false,
+                        activityPost: activity,
+                        id: activity.id,
+                    };
+                }).filter(Boolean);
+            }
+            
+            return [];
         }, [posts, currentUserId, activeView, selectedPostIdForThread, mentionPosts]);
         
+        const threadData = useMemo(() => {
+            if (!selectedPostIdForThread) return null;
+
+            const postsById = new Map(posts.map(p => [p.id, p]));
+            const selectedPost = postsById.get(selectedPostIdForThread);
+            if (!selectedPost) return null;
+
+            const parentPosts = [];
+            let current = selectedPost;
+            while (current.replyToId) {
+                const parent = postsById.get(current.replyToId);
+                if (!parent) break;
+                parentPosts.unshift(parent);
+                current = parent;
+            }
+            
+            const replies = posts
+                .filter(p => p.replyToId === selectedPostIdForThread)
+                .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+            
+            const postsWithChildren = new Set(posts.map(p => p.replyToId).filter(id => id));
+            const hasNestedReplies = replies.some(r => postsWithChildren.has(r.id));
+            
+            return { parentPosts, selectedPost, replies, hasNestedReplies, postsWithChildren };
+        }, [selectedPostIdForThread, posts]);
+
         const currentViewData = VIEW_OPTIONS.find(v => v.id === activeView);
         const LoaderIcon = Loader; 
         const ToggleIcon = isProfileSelectorOpen ? ChevronUp : ChevronDown;
@@ -1577,24 +1716,25 @@ const App = () => {
                 </div>
             );
         }
-
-        const selectedPost = posts.find(p => p.id === selectedPostIdForThread);
         
-        const hasParentPost = selectedPost && selectedPost.replyToId;
-
-        const backButtonText = hasParentPost
-            ? '← 이전 게시물로 돌아가기'
-            : `← ${currentViewData.name}로 돌아가기`;
-
         const handleThreadBackClick = () => {
-            if (hasParentPost) {
-                setSelectedPostIdForThread(selectedPost.replyToId);
-            } else {
-                setSelectedPostIdForThread(null);
-            }
+            setSelectedPostIdForThread(null);
         };
-
+        
         const currentProfileDisplay = currentUserProfile || { name: '로그아웃됨', handle: 'guest', profile: '?', color: 'bg-gray-500', profileImageUrl: '' };
+        
+        const allPostProps = {
+            onThreadSelect: handleThreadSelect, 
+            onEditPost: handleEditPost, 
+            onRequestDelete: handleRequestDelete, 
+            onNewPostAnimated: clearNewPostId, 
+            newPostId, 
+            posts, 
+            onToggleLike: handleToggleLike, 
+            onToggleBookmark: handleToggleBookmark, 
+            onRetweetAction: handleRetweetAction, 
+            onReplyClick: handleReplyClick
+        };
 
         return (
             <div className="min-h-screen bg-gray-100 dark:bg-gray-900 font-sans antialiased pt-[57px]"> 
@@ -1766,7 +1906,6 @@ const App = () => {
                                     onClick={() => {
                                         setActiveView(view.id);
                                         setSelectedPostIdForThread(null);
-                                        // 🔔 '알림' 탭을 클릭하면, 현재 시간을 "마지막으로 확인한 시간"으로 기록
                                         if (view.id === 'notifications' && currentUserId) {
                                             const now = new Date().getTime();
                                             localStorage.setItem(`${LAST_CHECKED_NOTIFICATIONS_KEY}_${currentUserId}`, now);
@@ -1783,7 +1922,6 @@ const App = () => {
                                     disabled={!currentUserId && view.id !== 'timeline'}
                                 >
                                     {view.name}
-                                    {/* 🔔 안 읽은 알림이 있을 경우 빨간 점 표시 */}
                                     {view.id === 'notifications' && unreadMentionCount > 0 && (
                                         <span className="absolute top-2 right-1/4 w-2 h-2 bg-red-500 rounded-full"></span>
                                     )}
@@ -1808,59 +1946,103 @@ const App = () => {
                     )}
 
                     <main>
-                      {selectedPostIdForThread ? (
-                        <div className="p-4">
-                            <button 
-                                onClick={handleThreadBackClick}
-                                className="text-sm text-blue-500 hover:text-blue-600 font-semibold mb-4 p-2 rounded-lg bg-blue-50 dark:bg-gray-700 transition"
-                            >
-                                {backButtonText}
-                            </button>
-                            <h2 className="text-lg font-bold border-b pb-2 mb-4 dark:border-gray-700">스레드 보기</h2>
-                            {selectedPost ? (
-                                <PostItem 
-                                    post={selectedPost} 
-                                    onThreadSelect={setSelectedPostIdForThread}
-                                    onEditPost={handleEditPost}
-                                    onRequestDelete={handleRequestDelete}
-                                    onNewPostAnimated={clearNewPostId}
-                                    newPostId={newPostId}
-                                    posts={posts} 
-                                    isMainTimeline={false} 
-                                    onToggleLike={handleToggleLike} 
-                                    onToggleBookmark={handleToggleBookmark} 
-                                    onRetweetAction={handleRetweetAction} 
-                                    onReplyClick={handleReplyClick}
-                                />
-                            ) : (
-                                <div className="text-center text-gray-500">게시물을 찾을 수 없습니다.</div>
-                            )}
-                        </div>
-                      ) : (
-                        displayPosts.length === 0 ? (
+                        {selectedPostIdForThread ? (
+                            <div>
+                                <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center space-x-4">
+                                    <button 
+                                        onClick={handleThreadBackClick}
+                                        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                                    >
+                                        {typeof ArrowLeft === 'string' ? <span className="text-xl">{ArrowLeft}</span> : <ArrowLeft size={20} />}
+                                    </button>
+                                    <h2 className="text-lg font-bold">스레드</h2>
+                                </div>
+                                {threadData ? (
+                                    <div>
+                                        {threadData.parentPosts.map((post, index) => (
+                                            <PostItem
+                                                key={post.id}
+                                                {...allPostProps}
+                                                post={post}
+                                                isThreadView={true}
+                                                drawTopLine={index > 0}
+                                                drawBottomLine={true}
+                                            />
+                                        ))}
+
+                                        <PostItem
+                                            key={threadData.selectedPost.id}
+                                            {...allPostProps}
+                                            post={threadData.selectedPost}
+                                            isThreadView={true}
+                                            isMainFocus={true} 
+                                            drawTopLine={threadData.parentPosts.length > 0}
+                                            drawBottomLine={threadData.replies.length > 0}
+                                        />
+                                        
+                                        <div className="border-b border-gray-200 dark:border-gray-700">
+                                        <ReplyForm 
+                                            parentId={threadData.selectedPost.id} 
+                                            onReply={handlePost} 
+                                            isMainPost={false} 
+                                            currentUserProfile={currentUserProfile}
+                                            currentUserId={currentUserId}
+                                            parentAuthorHandle={threadData.selectedPost.authorHandle}
+                                        />
+                                        </div>
+
+                                        {threadData.replies.map((reply, index) => (
+                                            <ExpandableReply
+                                                key={reply.id}
+                                                reply={reply}
+                                                index={index}
+                                                replies={threadData.replies}
+                                                allPostProps={allPostProps}
+                                                posts={posts}
+                                                postsWithChildren={threadData.postsWithChildren}
+                                            />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-gray-500 p-8">게시물을 찾을 수 없습니다.</div>
+                                )}
+                            </div>
+                        ) : displayItems.length === 0 ? (
                             <div className="p-10 text-center text-gray-500 dark:text-gray-400">
                                 {currentViewData.emptyMessage}
                             </div>
+                        ) : activeView === 'timeline' ? (
+                                displayItems.map(activity => {
+                                if (activity.isReplyActivity) {
+                                    return (
+                                        <div key={activity.id} 
+                                            className="border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                            onClick={() => handleThreadSelect(activity.parentPost.id)}
+                                        >
+                                            <PostItem {...allPostProps} post={activity.parentPost} isPreview={true} isTimelineParent={true} />
+                                            <div className="flex pl-4 pt-2">
+                                                <div className="w-10 mr-3 flex-shrink-0 flex justify-center">
+                                                    <span className="text-gray-400 dark:text-gray-500 text-xl">└</span>
+                                                </div>
+                                                <div className="flex-grow">
+                                                    <PostItem {...allPostProps} post={activity.activityPost} isPreview={true} isTimelinePreview={true} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                } else {
+                                    return <PostItem key={activity.id} {...allPostProps} post={activity.activityPost} />;
+                                }
+                            })
                         ) : (
-                            displayPosts.map(post => (
-                            <PostItem 
-                                key={post.id} 
-                                post={post} 
-                                onThreadSelect={setSelectedPostIdForThread} 
-                                onEditPost={handleEditPost}
-                                onRequestDelete={handleRequestDelete} 
-                                onNewPostAnimated={clearNewPostId}
-                                newPostId={newPostId} 
-                                posts={posts} 
-                                isMainTimeline={true} 
-                                onToggleLike={handleToggleLike} 
-                                onToggleBookmark={handleToggleBookmark} 
-                                onRetweetAction={handleRetweetAction}
-                                onReplyClick={handleReplyClick}
-                            />
+                            displayItems.map(post => (
+                                <PostItem 
+                                    key={post.id} 
+                                    {...allPostProps}
+                                    post={post}
+                                />
                             ))
-                        )
-                      )}
+                        )}
                     </main>
                 </div>
                 
@@ -1908,4 +2090,4 @@ const App = () => {
 
 </body>
 </html>
-}
+
