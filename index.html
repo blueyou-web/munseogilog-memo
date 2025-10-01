@@ -787,7 +787,7 @@ const MOCK_USERS = [
                     <div className={`flex items-start ${isTimelinePreview ? 'pb-4' : 'p-4'}`}>
                         <div className="mr-3 flex-shrink-0 flex flex-col items-center relative">
                             {finalDrawTopLine && (
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-px h-4 bg-gray-300 dark:bg-gray-700"></div>
                             )}
                             <ProfilePictureDisplay
                                 profile={postProfile}
@@ -795,7 +795,7 @@ const MOCK_USERS = [
                                 textSizeClass={isMainFocus ? 'text-xl' : 'text-lg'}
                             />
                             {finalDrawBottomLine && (
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 w-px h-full bg-gray-300 dark:bg-gray-600"></div>
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 w-px h-full bg-gray-300 dark:bg-gray-700"></div>
                             )}
                         </div>
                         
@@ -980,14 +980,10 @@ const MOCK_USERS = [
         const [showImageInput, setShowImageInput] = useState(false);
         const textareaRef = useRef(null); 
         
-        // --- 수정된 부분 ---
-        // 답글을 달 대상 게시물이 변경될 때마다 입력창의 내용을 업데이트하여
-        // 항상 올바른 사용자 아이디가 표시되도록 합니다.
         useEffect(() => {
             const initialContent = !isMainPost && parentAuthorHandle ? `@${parentAuthorHandle} ` : '';
             setReplyContent(initialContent);
         }, [parentId, parentAuthorHandle, isMainPost]);
-        // --- 수정 끝 ---
 
         useEffect(() => {
             if (textareaRef.current) {
@@ -1006,7 +1002,6 @@ const MOCK_USERS = [
         const handleReplySubmit = (e) => {
             e.preventDefault();
             onReply(replyContent, parentId, null, imageUrl.trim()); 
-            // 제출 후에도 다시 올바른 아이디로 초기화합니다.
             const initialContent = !isMainPost && parentAuthorHandle ? `@${parentAuthorHandle} ` : '';
             setReplyContent(isMainPost ? '' : initialContent);
             setImageUrl('');
@@ -1019,14 +1014,14 @@ const MOCK_USERS = [
           <form onSubmit={handleReplySubmit} className={`flex flex-col ${isMainPost ? 'px-4 pb-4' : 'px-4 py-3'}`}>
             <div className="flex">
                 <div className="mr-3 flex-shrink-0">
-                    <ProfilePictureDisplay profile={formProfile} sizeClass="w-10 h-10" textSizeClass="text-lg" />
+                    <ProfilePictureDisplay profile={formProfile} sizeClass="w-10 h-10 mt-2" textSizeClass="text-lg" />
                 </div>
                 <textarea
                     ref={textareaRef}
                     value={replyContent}
                     onChange={(e) => setReplyContent(e.target.value)}
                     placeholder={isMainPost ? "지금 무슨 일이 일어나고 있나요?" : "답글을 게시하세요."}
-                    className="flex-grow p-2 text-base bg-transparent focus:outline-none dark:text-gray-100 resize-none overflow-hidden"
+                    className="flex-grow p-2 text-base bg-transparent focus:outline-none dark:text-gray-100 resize-none overflow-hidden mt-2"
                     rows="1"
                     disabled={!currentUserId}
                     maxLength="280" 
@@ -1653,8 +1648,23 @@ const App = () => {
             if (activeView === 'timeline') {
                 const postsById = new Map(posts.map(p => [p.id, p]));
                 
+                // 1. 다른 게시물에 대한 답글의 '부모'가 되는 게시물 ID를 모두 수집합니다.
+                const parentIds = new Set(posts.map(p => p.replyToId).filter(Boolean));
+
+                // 2. 타임라인에 표시할 활동들을 필터링합니다.
                 const timelineActivities = posts
-                    .filter(p => !(p.retweetedPostId && !p.content && !p.replyToId))
+                    .filter(p => {
+                        // 단순 리트윗은 제외합니다.
+                        const isSimpleRetweet = p.retweetedPostId && !p.content && !p.replyToId;
+                        if (isSimpleRetweet) return false;
+                        
+                        // 다른 답글의 부모 역할을 하는 게시물은 타임라인에서 단독으로 표시하지 않습니다.
+                        if (parentIds.has(p.id)) return false;
+
+                        return true;
+                    })
+                    // `posts` 상태가 이미 `threadUpdatedTimestamp` 기준으로 정렬되어 있으므로,
+                    // 여기서는 시간 순서대로 다시 정렬하여 최신 활동이 위로 오게 합니다.
                     .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
                 return timelineActivities.map(activity => {
@@ -2024,7 +2034,7 @@ const App = () => {
                                             <PostItem {...allPostProps} post={activity.parentPost} isPreview={true} isTimelineParent={true} />
                                             <div className="flex pl-4 pt-2">
                                                 <div className="w-10 mr-3 flex-shrink-0 flex justify-center">
-                                                    <span className="text-gray-400 dark:text-gray-500 text-xl">└</span>
+                                                    <span className="text-gray-300 dark:text-gray-700 text-xl">└</span>
                                                 </div>
                                                 <div className="flex-grow">
                                                     <PostItem {...allPostProps} post={activity.activityPost} isPreview={true} isTimelinePreview={true} />
@@ -2092,3 +2102,4 @@ const App = () => {
 
 </body>
 </html>
+
