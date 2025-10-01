@@ -1404,10 +1404,11 @@ const App = () => {
                     mentions: doc.data().mentions || [],
                 }));
                 
+                // Firestore에서 가져온 데이터를 timestamp 기준으로 한 번 정렬해 줍니다.
                 const sortedPosts = fetchedPosts.sort((a, b) => {
-                    const aSortTime = (a.threadUpdatedTimestamp || a.timestamp).getTime();
-                    const bSortTime = (b.threadUpdatedTimestamp || b.timestamp).getTime();
-                    return bSortTime - aSortTime; 
+                    const aTime = a.timestamp.getTime();
+                    const bTime = b.timestamp.getTime();
+                    return bTime - aTime; 
                 });
                 setPosts(sortedPosts);
             }, (error) => {
@@ -1444,25 +1445,8 @@ const App = () => {
                 }
             }
             
-            let rootPostId = null;
-            if (replyToId) {
-                let currentParentId = replyToId;
-                let docRef;
-                let docSnap;
-                
-                while (currentParentId) {
-                    docRef = doc(db, `/artifacts/${canvasAppId}/public/data/posts`, currentParentId);
-                    docSnap = await getDoc(docRef);
-                    if (!docSnap.exists()) break;
-                    const parentData = docSnap.data();
-                    const parentTargetId = parentData.replyToId; 
-                    if (!parentTargetId) {
-                        rootPostId = currentParentId; 
-                        break;
-                    }
-                    currentParentId = parentTargetId; 
-                }
-            }
+            // 답글을 달 때, 원본 게시물(rootPost)의 threadUpdatedTimestamp를 업데이트하는 로직은 삭제합니다.
+            // 이제 개별 '가지'가 타임라인 순서를 결정하므로, 루트 게시물의 시간을 바꿀 필요가 없습니다.
 
             try {
                 const postsColRef = collection(db, `/artifacts/${canvasAppId}/public/data/posts`);
@@ -1482,13 +1466,7 @@ const App = () => {
                     bookmarks: [],
                     mentions: Array.from(mentions),
                 });
-                
-                if (replyToId && rootPostId) {
-                    const rootDocRef = doc(db, `/artifacts/${canvasAppId}/public/data/posts`, rootPostId);
-                    await updateDoc(rootDocRef, { 
-                        threadUpdatedTimestamp: serverTimestamp() 
-                    });
-                }
+
                 setNewPostId(newDocRef.id); 
             } catch (e) {
                 console.error("게시 실패:", e);
@@ -1628,18 +1606,17 @@ const App = () => {
         }, [mentionPosts, lastCheckedNotifications]);
 
 
+        // [!!!] 여기가 '나뭇가지' 로직의 핵심입니다.
         const displayItems = useMemo(() => {
             if (selectedPostIdForThread) return [];
 
             if (activeView === 'likes') {
                 if (!currentUserId) return [];
-                return posts.filter(p => p.likes?.includes(currentUserId))
-                            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+                return posts.filter(p => p.likes?.includes(currentUserId));
             }
             if (activeView === 'bookmarks') {
                 if (!currentUserId) return [];
-                return posts.filter(p => p.bookmarks?.includes(currentUserId))
-                            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+                return posts.filter(p => p.bookmarks?.includes(currentUserId));
             }
             if (activeView === 'notifications') {
                 return mentionPosts;
@@ -1648,39 +1625,79 @@ const App = () => {
             if (activeView === 'timeline') {
                 const postsById = new Map(posts.map(p => [p.id, p]));
                 
-                const parentIds = new Set(posts.map(p => p.replyToId).filter(Boolean));
+                // 헬퍼 함수: 게시물 ID로 부모 체인을 거슬러 올라가 root와 1단계 댓글(가지)을 찾습니다.
+                const findRootAndBranch = (startPost) => {
+                    let current = startPost;
+                    let level1Reply = null;
 
-                const timelineActivities = posts
-                    .filter(p => {
-                        // 다른 답글의 부모 역할을 하는 게시물은 타임라인에서 단독으로 표시하지 않습니다.
-                        if (parentIds.has(p.id)) return false;
+                    // 자기 자신이 root인 경우
+                    if (!current.replyToId) {
+                        return { rootPost: current, level1Reply: null };
+                    }
+                    
+                    while(current && current.replyToId) {
+                        const parent = postsById.get(current.replyToId);
+                        if (!parent) return { rootPost: null, level1Reply: null };
+                        
+                        // 부모가 root 게시물이면, 현재 게시물이 1단계 댓글(가지)입니다.
+                        if (!parent.replyToId) {
+                            level1Reply = current;
+                            return { rootPost: parent, level1Reply };
+                        }
+                        current = parent;
+                    }
+                    return { rootPost: null, level1Reply: null }; // 비정상적인 경우
+                };
 
-                        return true;
-                    })
-                    .sort((a, b) => {
-                        const aTime = (a.threadUpdatedTimestamp || a.timestamp).getTime();
-                        const bTime = (b.threadUpdatedTimestamp || b.timestamp).getTime();
-                        return bTime - aTime;
-                    });
+                const timelineActivities = [];
+                const processedBranches = new Set(); // 이미 처리된 가지/루트를 추적
 
-                return timelineActivities.map(activity => {
-                    if (activity.replyToId) {
-                        const parent = postsById.get(activity.replyToId);
-                        if (parent) {
-                            return {
-                                isReplyActivity: true,
-                                parentPost: parent,
-                                activityPost: activity,
-                                id: activity.id,
-                            };
+                // 모든 게시물을 최신순으로 순회
+                for (const latestPostInActivity of posts) {
+
+                    // 단순 리트윗 처리
+                    if (latestPostInActivity.retweetedPostId && !latestPostInActivity.content && !latestPostInActivity.replyToId) {
+                         if (!processedBranches.has(latestPostInActivity.id)) {
+                             timelineActivities.push({ type: 'retweet', activity: latestPostInActivity });
+                             processedBranches.add(latestPostInActivity.id);
+                         }
+                         continue;
+                    }
+
+                    const { rootPost, level1Reply } = findRootAndBranch(latestPostInActivity);
+
+                    if (!rootPost) continue;
+
+                    // 케이스 1: 1단계 댓글(가지)이 있는 대화
+                    if (level1Reply) {
+                        // 이 가지가 아직 처리되지 않았다면, 타임라인에 추가
+                        if (!processedBranches.has(level1Reply.id)) {
+                            timelineActivities.push({
+                                type: 'branch',
+                                rootPost: rootPost,
+                                branchRoot: level1Reply, // 1단계 댓글
+                                latestReply: latestPostInActivity, // 이 가지에서 가장 최신 활동
+                                id: level1Reply.id // 고유 키
+                            });
+                            processedBranches.add(level1Reply.id);
+                        }
+                    } 
+                    // 케이스 2: 댓글이 없는 원본 게시물
+                    else {
+                        const hasReplies = posts.some(p => p.replyToId === rootPost.id);
+                        if (!hasReplies && !processedBranches.has(rootPost.id)) {
+                            timelineActivities.push({
+                                type: 'root_only',
+                                rootPost: rootPost,
+                                id: rootPost.id
+                            });
+                            processedBranches.add(rootPost.id);
                         }
                     }
-                    return {
-                        isReplyActivity: false,
-                        activityPost: activity,
-                        id: activity.id,
-                    };
-                }).filter(Boolean);
+                }
+                
+                // 최종적으로 시간순 정렬은 유지됩니다. (posts 배열 자체가 최신순)
+                return timelineActivities;
             }
             
             return [];
@@ -2019,29 +2036,46 @@ const App = () => {
                             <div className="p-10 text-center text-gray-500 dark:text-gray-400">
                                 {currentViewData.emptyMessage}
                             </div>
+                        // [!!!] 여기가 '나뭇가지' 뷰를 렌더링하는 핵심 부분입니다.
                         ) : activeView === 'timeline' ? (
-                                displayItems.map(activity => {
-                                if (activity.isReplyActivity) {
-                                    return (
-                                        <div key={activity.id} 
-                                            className="border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                            onClick={() => handleThreadSelect(activity.parentPost.id)}
-                                        >
-                                            <PostItem {...allPostProps} post={activity.parentPost} isPreview={true} isTimelineParent={true} />
-                                            <div className="flex pl-4 pt-2">
-                                                <div className="w-10 mr-3 flex-shrink-0 flex justify-center">
-                                                    <span className="text-gray-300 dark:text-gray-700 text-xl">└</span>
-                                                </div>
-                                                <div className="flex-grow">
-                                                    <PostItem {...allPostProps} post={activity.activityPost} isPreview={true} isTimelinePreview={true} />
-                                                </div>
+                                displayItems.map(item => {
+                                    if (item.type === 'root_only') {
+                                        return <PostItem key={item.id} {...allPostProps} post={item.rootPost} />;
+                                    }
+                                    
+                                    if (item.type === 'retweet') {
+                                        return <PostItem key={item.activity.id} {...allPostProps} post={item.activity} />;
+                                    }
+
+                                    if (item.type === 'branch') {
+                                        // 한 가지(branch)에 속한 여러 게시물을 감싸는 컨테이너
+                                        // 클릭하면 해당 가지의 루트(1단계 댓글) 스레드로 이동
+                                        return (
+                                            <div 
+                                                key={item.id} 
+                                                className="border-b border-gray-200 dark:border-gray-800 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-gray-900/50"
+                                                onClick={() => handleThreadSelect(item.branchRoot.id)}
+                                            >
+                                                {/* 1. 원본 게시물 (항상 표시) */}
+                                                <PostItem 
+                                                    {...allPostProps} 
+                                                    post={item.rootPost} 
+                                                    isPreview={true} // 클릭 시 이동 외 다른 기능 제한
+                                                    drawBottomLine={true} // 아래에 댓글이 있으므로 선을 그림
+                                                />
+                                                
+                                                {/* 2. 최신 활동이 담긴 댓글 (가지) */}
+                                                <PostItem 
+                                                    {...allPostProps} 
+                                                    post={item.latestReply} 
+                                                    isPreview={true}
+                                                    drawTopLine={true} // 위에 부모 글이 있으므로 선을 그림
+                                                />
                                             </div>
-                                        </div>
-                                    );
-                                } else {
-                                    return <PostItem key={activity.id} {...allPostProps} post={activity.activityPost} />;
-                                }
-                            })
+                                        );
+                                    }
+                                    return null;
+                                })
                         ) : (
                             displayItems.map(post => (
                                 <PostItem 
@@ -2091,6 +2125,7 @@ const App = () => {
         );
     };
 
+
     const container = document.getElementById('root');
     const root = ReactDOM.createRoot(container);
     root.render(<App />);
@@ -2098,5 +2133,4 @@ const App = () => {
 
 </body>
 </html>
-
 
