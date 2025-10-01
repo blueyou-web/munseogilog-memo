@@ -60,6 +60,15 @@
 <script type="text/babel">
     const { useState, useEffect, useCallback, useMemo, useRef } = React;
     
+    // 유틸리티 함수: SHA-256 해시 생성 (비밀번호 보안용)
+    const sha256 = async (str) => {
+        const buffer = new TextEncoder().encode(str);
+        const hash = await crypto.subtle.digest('SHA-256', buffer);
+        const hex = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+        return hex;
+    };
+    
+    // Lucide 아이콘 정의
     const Lucide = window.LucideReact || {};
     
     const LogOut = Lucide.LogOut || '🚪'; 
@@ -76,6 +85,9 @@
     const X = Lucide.X || '❌';
     const ArrowLeft = Lucide.ArrowLeft || '←';
     const Bell = Lucide.Bell || '🔔';
+    // [다크모드 추가]
+    const Sun = Lucide.Sun || '☼';
+    const Moon = Lucide.Moon || '☽';
 
     const hardcodedFirebaseConfig = {
   apiKey: "AIzaSyB3icEr8HkxWY5xV1ZGmRejvYdPy8KyJ_E",
@@ -89,6 +101,8 @@
     
     const ACTIVE_USER_STORAGE_KEY = 'miniTwitterActiveUser';
     const LAST_CHECKED_NOTIFICATIONS_KEY = 'miniTwitterLastCheckedNotifications';
+    // [다크모드 추가] 로컬 스토리지 키
+    const DARK_MODE_STORAGE_KEY = 'miniTwitterDarkMode';
 
     let firebaseConfig, initialAuthToken, canvasAppId;
     
@@ -219,6 +233,78 @@ const MOCK_USERS = [
                 ) : (
                     <span className={`${textSizeClass} ${isSmall ? 'text-white' : ''}`}>{profile.profile}</span>
                 )}
+            </div>
+        );
+    };
+
+    // [2. 프로필 비밀번호] - 비밀번호 입력 모달
+    const PasswordModal = ({ user, onConfirm, onCancel }) => {
+        const [password, setPassword] = useState('');
+        const [error, setError] = useState('');
+        
+        const handleLogin = async (e) => {
+            e.preventDefault();
+            setError('');
+            
+            if (!password) {
+                return setError('비밀번호를 입력해 주세요.');
+            }
+            
+            const hashedInput = await sha256(password);
+            
+            if (hashedInput === user.passwordHash) {
+                onConfirm(user);
+            } else {
+                setError('비밀번호가 일치하지 않습니다.');
+            }
+        };
+
+        return (
+            <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-sm p-6 transform transition-all">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 border-b pb-2">
+                        @{user.handle}님으로 로그인
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        이 프로필은 비밀번호로 보호되어 있습니다.
+                    </p>
+
+                    <form onSubmit={handleLogin}>
+                        <div className="flex items-center space-x-3 mb-4">
+                            <ProfilePictureDisplay profile={user} sizeClass="w-10 h-10" textSizeClass="text-lg" />
+                            <span className="font-semibold dark:text-white">{user.name} (@{user.handle})</span>
+                        </div>
+                        
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="비밀번호 입력"
+                            className="w-full p-3 text-base border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        />
+                        
+                        {error && (
+                            <p className="text-red-500 text-sm mt-2">{error}</p>
+                        )}
+
+                        <div className="flex justify-end space-x-3 mt-6">
+                            <button
+                                type="button"
+                                onClick={onCancel}
+                                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-full hover:bg-gray-300 transition dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500"
+                            >
+                                취소
+                            </button>
+                            <button
+                                type="submit"
+                                className="px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition disabled:opacity-50"
+                                disabled={!password}
+                            >
+                                로그인
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         );
     };
@@ -519,20 +605,59 @@ const MOCK_USERS = [
         );
     };
 
-    const ProfileEditorModal = ({ profile, onSave, onCancel }) => {
+    const ProfileEditorModal = ({ profile, onSave, onCancel, currentPasswordHash }) => {
         const [name, setName] = useState(profile.name);
         const [handle, setHandle] = useState(profile.handle);
         const [profileImageUrl, setProfileImageUrl] = useState(profile.profileImageUrl || ''); 
+        const [newPassword, setNewPassword] = useState('');
+        const [confirmPassword, setConfirmPassword] = useState('');
+        const [oldPassword, setOldPassword] = useState('');
+        const [error, setError] = useState('');
 
         const isHandleValid = handle.length > 0 && /^[a-zA-Z0-9_]+$/.test(handle);
         const isNameValid = name.length > 0;
         
-        const isChanged = name !== profile.name || handle !== profile.handle || profileImageUrl !== (profile.profileImageUrl || '');
-        const isDisabled = !isHandleValid || !isNameValid || !isChanged;
+        const isInfoChanged = name !== profile.name || handle !== profile.handle || profileImageUrl !== (profile.profileImageUrl || '');
+        const isPasswordSet = !!currentPasswordHash;
+        
+        const isPasswordChanged = newPassword.length > 0;
+        const isPasswordValid = isPasswordChanged && newPassword === confirmPassword;
+        
+        // 변경이 없는 경우 저장 버튼 비활성화
+        const isDataUnchanged = !isInfoChanged && !isPasswordChanged;
+        // 비밀번호를 변경하는데 기존 비밀번호가 틀렸거나 새 비밀번호가 유효하지 않은 경우 저장 버튼 비활성화
+        const isPasswordError = isPasswordChanged && (!isPasswordValid || (isPasswordSet && !oldPassword));
+        const isDisabled = !isHandleValid || !isNameValid || isDataUnchanged || isPasswordError;
 
-        const handleSave = () => {
-            if (!isDisabled) {
-                onSave({ name, handle, profileImageUrl: profileImageUrl.trim() });
+        const handleSave = async () => {
+            setError('');
+            if (isPasswordChanged) {
+                if (newPassword !== confirmPassword) {
+                    return setError('새 비밀번호와 확인 비밀번호가 일치하지 않습니다.');
+                }
+                if (isPasswordSet) {
+                    const hashedOld = await sha256(oldPassword);
+                    if (hashedOld !== currentPasswordHash) {
+                        return setError('기존 비밀번호가 일치하지 않습니다.');
+                    }
+                }
+            }
+
+            try {
+                let passwordHash = currentPasswordHash;
+                if (isPasswordChanged) {
+                    passwordHash = await sha256(newPassword);
+                }
+                
+                onSave({ 
+                    name, 
+                    handle, 
+                    profileImageUrl: profileImageUrl.trim(), 
+                    passwordHash: isPasswordChanged ? passwordHash : (isPasswordSet ? currentPasswordHash : null)
+                });
+            } catch (e) {
+                console.error("Profile Save Error:", e);
+                setError('저장 중 오류가 발생했습니다.');
             }
         };
 
@@ -551,48 +676,94 @@ const MOCK_USERS = [
                         </div>
                     </div>
                     
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            프로필 이미지 URL
-                            <span className="text-xs text-gray-400 ml-2">(예: {EXAMPLE_IMAGE_URL})</span>
-                        </label>
-                        <input
-                            type="url"
-                            value={profileImageUrl}
-                            onChange={(e) => setProfileImageUrl(e.target.value)}
-                            className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-                            placeholder="이미지 주소를 입력하세요 (선택 사항)"
-                        />
-                    </div>
-
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">이름</label>
-                        <input
-                            type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-                            maxLength="15"
-                        />
-                    </div>
-
-                    <div className="mb-6">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">아이디 (Handle)</label>
-                        <div className="flex">
-                            <span className="inline-flex items-center px-3 text-sm text-gray-500 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg dark:bg-gray-600 dark:border-gray-600 dark:text-gray-300">@</span>
+                    <div className="space-y-4 mb-6">
+                        <div className="border-b pb-2 dark:border-gray-600">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                프로필 이미지 URL
+                                <span className="text-xs text-gray-400 ml-2">(예: {EXAMPLE_IMAGE_URL})</span>
+                            </label>
                             <input
-                                type="text"
-                                value={handle}
-                                onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                                className={`flex-1 p-2 border border-gray-300 rounded-r-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500 ${!isHandleValid && handle.length > 0 ? 'border-red-500' : ''}`}
-                                maxLength="15"
-                                placeholder="영문, 숫자, 밑줄만 가능"
+                                type="url"
+                                value={profileImageUrl}
+                                onChange={(e) => setProfileImageUrl(e.target.value)}
+                                className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                                placeholder="이미지 주소를 입력하세요 (선택 사항)"
                             />
                         </div>
-                        {!isHandleValid && handle.length > 0 && <p className="text-xs text-red-500 mt-1">아이디는 영문, 숫자, 밑줄(_)만 가능합니다.</p>}
+
+                        <div className="border-b pb-2 dark:border-gray-600">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">이름</label>
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                className="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                                maxLength="15"
+                            />
+                        </div>
+
+                        <div className="border-b pb-2 dark:border-gray-600">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">아이디 (Handle)</label>
+                            <div className="flex">
+                                <span className="inline-flex items-center px-3 text-sm text-gray-500 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg dark:bg-gray-600 dark:border-gray-600 dark:text-gray-300">@</span>
+                                <input
+                                    type="text"
+                                    value={handle}
+                                    onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                                    className={`flex-1 p-2 border border-gray-300 rounded-r-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-blue-500 focus:border-blue-500 ${!isHandleValid && handle.length > 0 ? 'border-red-500' : ''}`}
+                                    maxLength="15"
+                                    placeholder="영문, 숫자, 밑줄만 가능"
+                                />
+                            </div>
+                            {!isHandleValid && handle.length > 0 && <p className="text-xs text-red-500 mt-1">아이디는 영문, 숫자, 밑줄(_)만 가능합니다.</p>}
+                        </div>
+                    </div>
+                    
+                    {/* [2. 프로필 비밀번호] - 비밀번호 설정 섹션 */}
+                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 space-y-3">
+                        <h4 className="font-bold text-gray-800 dark:text-white">{isPasswordSet ? '비밀번호 변경' : '비밀번호 설정 (선택 사항)'}</h4>
+                        
+                        {isPasswordSet && (
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">기존 비밀번호</label>
+                                <input
+                                    type="password"
+                                    value={oldPassword}
+                                    onChange={(e) => setOldPassword(e.target.value)}
+                                    className="mt-1 w-full p-2 text-sm border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    placeholder="기존 비밀번호"
+                                />
+                            </div>
+                        )}
+                        
+                        <div>
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">{isPasswordSet ? '새 비밀번호' : '비밀번호'}</label>
+                            <input
+                                type="password"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                className="mt-1 w-full p-2 text-sm border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                placeholder={isPasswordSet ? "새 비밀번호 (변경 안 하려면 비워두세요)" : "비밀번호"}
+                            />
+                        </div>
+                        
+                        {isPasswordChanged && (
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">새 비밀번호 확인</label>
+                                <input
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="mt-1 w-full p-2 text-sm border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    placeholder="비밀번호 확인"
+                                />
+                                {newPassword !== confirmPassword && <p className="text-xs text-red-500 mt-1">비밀번호가 일치하지 않습니다.</p>}
+                            </div>
+                        )}
+                        {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
                     </div>
 
-                    <div className="flex justify-end space-x-3">
+                    <div className="flex justify-end space-x-3 mt-6">
                         <button
                             onClick={onCancel}
                             className="px-4 py-2 bg-gray-200 text-gray-800 rounded-full hover:bg-gray-300 transition dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500"
@@ -1165,6 +1336,19 @@ const ExpandableReply = ({ reply, index, replies, allPostProps, posts, postsWith
     );
 };
 
+// [1. 다크 모드 추가] - 토글 버튼 컴포넌트
+const DarkAndLightModeButton = ({ isDarkMode, onToggle }) => {
+    const Icon = isDarkMode ? Sun : Moon;
+    return (
+        <button
+            onClick={onToggle}
+            className="p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+            title={isDarkMode ? "라이트 모드로 전환" : "다크 모드로 전환"}
+        >
+            {typeof Icon === 'string' ? <span className="text-xl">{Icon}</span> : <Icon size={20} />}
+        </button>
+    );
+};
 
 const App = () => {
         const [db, setDb] = useState(null);
@@ -1183,11 +1367,19 @@ const App = () => {
         const [editingGroupName, setEditingGroupName] = useState(''); 
         
         const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+        const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false); // [2. 프로필 비밀번호]
+        const [userToAuthenticate, setUserToAuthenticate] = useState(null); // [2. 프로필 비밀번호]
         const [isProfileSelectorOpen, setIsProfileSelectorOpen] = useState(true); 
         const [activeView, setActiveView] = useState('timeline'); 
         const [postToRetweet, setPostToRetweet] = useState(null); 
         const [replyToPost, setReplyToPost] = useState(null); 
         const [lastCheckedNotifications, setLastCheckedNotifications] = useState(null);
+        // [1. 다크 모드 추가] - 상태 관리
+        const [isDarkMode, setIsDarkMode] = useState(() => {
+            const stored = localStorage.getItem(DARK_MODE_STORAGE_KEY);
+            if (stored !== null) return stored === 'true';
+            return window.matchMedia('(prefers-color-scheme: dark)').matches;
+        });
         
         const { getDoc, doc, onSnapshot, setDoc, collection } = window.firebase || {};
 
@@ -1215,6 +1407,7 @@ const App = () => {
                 name: custom.name || mockUserProfile.name,
                 handle: custom.handle || mockUserProfile.handle,
                 profileImageUrl: profileImageUrl, 
+                passwordHash: custom.passwordHash || null, // [2. 프로필 비밀번호]
             };
         }, [currentUserId, mockUserProfile, currentCustomProfile]); 
 
@@ -1232,14 +1425,16 @@ const App = () => {
             }
         };
         
-        const handleProfileSave = useCallback(async ({ name, handle, profileImageUrl }) => {
+        // [2. 프로필 비밀번호] - 프로필 저장 시 비밀번호 해시 저장 로직 추가
+        const handleProfileSave = useCallback(async ({ name, handle, profileImageUrl, passwordHash }) => {
             if (!db || !currentUserId) return;
             try {
                 const profileDocRef = doc(db, `/artifacts/${canvasAppId}/public/data/userProfiles`, currentUserId);
                 await setDoc(profileDocRef, { 
                     name, 
                     handle, 
-                    profileImageUrl: profileImageUrl.trim() 
+                    profileImageUrl: profileImageUrl.trim(),
+                    passwordHash: passwordHash // 해시된 비밀번호 저장
                 }, { merge: true });
             } catch (error) {
                 console.error("Error saving profile to Firestore:", error);
@@ -1260,16 +1455,32 @@ const App = () => {
         };
 
         const handleProfileSwitch = (user) => {
+            const fullProfile = allCustomProfiles[user.uid] ? { ...user, ...allCustomProfiles[user.uid] } : user;
+            
             if (currentUserId === user.uid) {
-                handleLogout(); 
+                return handleLogout(); 
+            }
+
+            // [2. 프로필 비밀번호] - 비밀번호 설정 확인 및 모달 열기
+            if (fullProfile.passwordHash) {
+                setUserToAuthenticate(fullProfile);
+                setIsPasswordModalOpen(true);
             } else {
-                setCurrentUserId(user.uid);
-                localStorage.setItem(ACTIVE_USER_STORAGE_KEY, user.uid);
-                setIsProfileSelectorOpen(false); 
-                setActiveView('timeline'); 
-                setSelectedPostIdForThread(null);
+                performLogin(user);
             }
         };
+        
+        // [2. 프로필 비밀번호] - 실제 로그인 수행 로직
+        const performLogin = useCallback((user) => {
+            setCurrentUserId(user.uid);
+            localStorage.setItem(ACTIVE_USER_STORAGE_KEY, user.uid);
+            setIsProfileSelectorOpen(false); 
+            setActiveView('timeline'); 
+            setSelectedPostIdForThread(null);
+            setIsPasswordModalOpen(false);
+            setUserToAuthenticate(null);
+        }, []);
+
 
         const handleSaveGroupName = useCallback(async (groupId) => {
             if (!db || !groupId || editingGroupName.trim() === '') return;
@@ -1340,6 +1551,22 @@ const App = () => {
             }
         }, []);
         
+        // [1. 다크 모드 추가] - Dark Mode 상태를 body 클래스에 반영 및 로컬 스토리지에 저장
+        useEffect(() => {
+            if (isDarkMode) {
+                document.body.classList.add('dark');
+                localStorage.setItem(DARK_MODE_STORAGE_KEY, 'true');
+            } else {
+                document.body.classList.remove('dark');
+                localStorage.setItem(DARK_MODE_STORAGE_KEY, 'false');
+            }
+        }, [isDarkMode]);
+
+        // [1. 다크 모드 추가] - 토글 핸들러
+        const toggleDarkMode = useCallback(() => {
+            setIsDarkMode(prev => !prev);
+        }, []);
+
         useEffect(() => {
             if (!db || !currentUserId) {
                 setCurrentCustomProfile(null);
@@ -1790,6 +2017,12 @@ const App = () => {
                         </button>
 
                         <div className="space-x-2 flex items-center">
+                            {/* [1. 다크 모드 추가] - 토글 버튼 위치 */}
+                            <DarkAndLightModeButton 
+                                isDarkMode={isDarkMode} 
+                                onToggle={toggleDarkMode}
+                            />
+
                             {currentUserId && (
                                 <button 
                                     onClick={() => setIsProfileModalOpen(true)}
@@ -1889,7 +2122,8 @@ const App = () => {
                                         ...user,
                                         name: custom.name || user.name,
                                         handle: custom.handle || user.handle,
-                                        profileImageUrl: custom.profileImageUrl || '', 
+                                        profileImageUrl: custom.profileImageUrl || '',
+                                        passwordHash: custom.passwordHash || null, // [2. 프로필 비밀번호]
                                     };
 
                                     return (
@@ -1914,6 +2148,9 @@ const App = () => {
                                                 <p className="font-bold truncate">{displayProfile.name}</p>
                                                 <p className="text-xs truncate">@{displayProfile.handle}</p>
                                             </div>
+                                            {displayProfile.passwordHash && (
+                                                <span className="text-xs ml-1">🔒</span> // 비밀번호 잠금 아이콘
+                                            )}
                                         </button>
                                     );
                                 })}
@@ -2132,6 +2369,7 @@ const App = () => {
                     <ProfileEditorModal
                         profile={currentUserProfile}
                         onSave={handleProfileSave}
+                        currentPasswordHash={currentUserProfile.passwordHash} // [2. 프로필 비밀번호]
                         onCancel={() => setIsProfileModalOpen(false)}
                     />
                 )}
@@ -2153,6 +2391,15 @@ const App = () => {
                         onCancel={handleCancelReply}
                         currentUserProfile={currentUserProfile}
                         currentUserId={currentUserId}
+                    />
+                )}
+                
+                {/* [2. 프로필 비밀번호] - 비밀번호 인증 모달 표시 */}
+                {isPasswordModalOpen && userToAuthenticate && (
+                    <PasswordModal
+                        user={userToAuthenticate}
+                        onConfirm={performLogin}
+                        onCancel={() => { setIsPasswordModalOpen(false); setUserToAuthenticate(null); }}
                     />
                 )}
             </div>
