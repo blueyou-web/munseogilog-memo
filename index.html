@@ -871,10 +871,10 @@ const MOCK_USERS = [
                             ) : (
                                 <>
                                     {isSimpleRetweet && originalPost ? (
-                                        <p className={`text-gray-800 dark:text-gray-200 whitespace-pre-wrap ${isMainFocus ? 'text-xl my-3' : 'mt-1 text-sm'}`}>{renderContentWithMentions(originalPost.content)}</p>
+                                        <p className={`text-gray-800 dark:text-gray-200 whitespace-pre-wrap ${isMainFocus ? 'text-lg my-3' : 'mt-1 text-sm'}`}>{renderContentWithMentions(originalPost.content)}</p>
                                     ) : (
                                         <>
-                                            <p className={`text-gray-800 dark:text-gray-200 whitespace-pre-wrap ${isMainFocus ? 'text-xl my-3' : 'mt-1 text-sm'}`}>{renderContentWithMentions(post.content)}</p>
+                                            <p className={`text-gray-800 dark:text-gray-200 whitespace-pre-wrap ${isMainFocus ? 'text-lg my-3' : 'mt-1 text-sm'}`}>{renderContentWithMentions(post.content)}</p>
 
                                             {post.imageUrl && !isSimpleRetweet && (
                                                 <div className={`mt-3 ${isMainFocus ? 'max-h-80' : 'max-h-96'} overflow-hidden rounded-xl`}>
@@ -988,14 +988,6 @@ const MOCK_USERS = [
             }
         }, [replyContent]);
         
-        useEffect(() => {
-            if (!isMainPost && textareaRef.current) {
-                textareaRef.current.focus();
-                const len = textareaRef.current.value.length;
-                textareaRef.current.setSelectionRange(len, len);
-            }
-        }, [isMainPost, parentId]); // parentId 변경 시에도 포커스
-
         const formProfile = currentUserProfile || { 
             profile: '👤', 
             color: 'bg-gray-500', 
@@ -1091,7 +1083,7 @@ const RecursiveReplies = ({ parentId, allPostProps, posts, postsWithChildren }) 
     );
 
     return (
-        <>
+        <div className="pl-0">
             {childReplies.map((reply, index) => {
                 const hasChildren = postsWithChildren.has(reply.id);
                 const hasSiblingAfter = index < childReplies.length - 1;
@@ -1109,7 +1101,7 @@ const RecursiveReplies = ({ parentId, allPostProps, posts, postsWithChildren }) 
                     </div>
                 )
             })}
-        </>
+        </div>
     );
 };
 
