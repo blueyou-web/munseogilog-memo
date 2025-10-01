@@ -76,15 +76,15 @@
     const ArrowLeft = Lucide.ArrowLeft || '←';
     const Bell = Lucide.Bell || '🔔';
 
-    const hardcodedFirebaseConfig = {
-        apiKey: "AIzaSyCx8xjwiyje_X5XS1YnYgZGtpDla6zQtE0",
-        authDomain: "experiment-1-8dfe7.firebaseapp.com",
-        databaseURL: "https://experiment-1-8dfe7-default-rtdb.firebaseio.com",
-        projectId: "experiment-1-8dfe7",
-        storageBucket: "experiment-1-8dfe7.firebasestorage.app",
-        messagingSenderId: "372609175973",
-        appId: "1:372609175973:web:4b9a33f82677f8621c184c"
-    };
+const firebaseConfig = {
+  apiKey: "AIzaSyB3icEr8HkxWY5xV1ZGmRejvYdPy8KyJ_E",
+  authDomain: "tlfgjadyd-9cdc7.firebaseapp.com",
+  databaseURL: "https://tlfgjadyd-9cdc7-default-rtdb.firebaseio.com",
+  projectId: "tlfgjadyd-9cdc7",
+  storageBucket: "tlfgjadyd-9cdc7.firebasestorage.app",
+  messagingSenderId: "302944812833",
+  appId: "1:302944812833:web:6ffce93e9961ad7f36c860"
+};
     
     const ACTIVE_USER_STORAGE_KEY = 'miniTwitterActiveUser';
     const LAST_CHECKED_NOTIFICATIONS_KEY = 'miniTwitterLastCheckedNotifications';
@@ -1648,24 +1648,20 @@ const App = () => {
             if (activeView === 'timeline') {
                 const postsById = new Map(posts.map(p => [p.id, p]));
                 
-                // 1. 다른 게시물에 대한 답글의 '부모'가 되는 게시물 ID를 모두 수집합니다.
                 const parentIds = new Set(posts.map(p => p.replyToId).filter(Boolean));
 
-                // 2. 타임라인에 표시할 활동들을 필터링합니다.
                 const timelineActivities = posts
                     .filter(p => {
-                        // 단순 리트윗은 제외합니다.
-                        const isSimpleRetweet = p.retweetedPostId && !p.content && !p.replyToId;
-                        if (isSimpleRetweet) return false;
-                        
                         // 다른 답글의 부모 역할을 하는 게시물은 타임라인에서 단독으로 표시하지 않습니다.
                         if (parentIds.has(p.id)) return false;
 
                         return true;
                     })
-                    // `posts` 상태가 이미 `threadUpdatedTimestamp` 기준으로 정렬되어 있으므로,
-                    // 여기서는 시간 순서대로 다시 정렬하여 최신 활동이 위로 오게 합니다.
-                    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+                    .sort((a, b) => {
+                        const aTime = (a.threadUpdatedTimestamp || a.timestamp).getTime();
+                        const bTime = (b.threadUpdatedTimestamp || b.timestamp).getTime();
+                        return bTime - aTime;
+                    });
 
                 return timelineActivities.map(activity => {
                     if (activity.replyToId) {
