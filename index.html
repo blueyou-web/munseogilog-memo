@@ -252,8 +252,10 @@ const NotificationItem = ({ notification, posts, allCustomProfiles, onThreadSele
         };
     }).slice(0, 5) || []; 
 
+    // notification.postId에 해당하는 원본 게시물을 찾습니다.
     const targetPost = posts.find(p => p.id === notification.postId);
-const quotePost = posts.find(p => p.retweetedPostId === notification.postId);
+    const quotePost = notification.type === 'quote' ? posts.find(p => p.retweetedPostId === notification.postId && p.authorId === notification.actors[0]) : null;
+
     const getNotificationText = () => {
         const firstActorName = actorProfiles[0].name;
         const othersCount = notification.actors.length - 1;
@@ -274,92 +276,93 @@ const quotePost = posts.find(p => p.retweetedPostId === notification.postId);
     };
     
     const getIcon = () => {
-    switch (notification.type) {
-        case 'like': {
-            const Icon = Heart;
-            if (typeof Icon === 'function') {
-                return <Icon size={24} className="text-red-500 flex-shrink-0" />;
+        switch (notification.type) {
+            case 'like': {
+                const Icon = Heart;
+                if (typeof Icon === 'function') {
+                    return <Icon size={24} className="text-red-500 flex-shrink-0" />;
+                }
+                return <span className="text-2xl">{Icon}</span>;
             }
-            return <span className="text-2xl">{Icon}</span>;
-        }
-        case 'retweet': {
-            const Icon = RepeatIcon;
-            if (typeof Icon === 'function') {
-                return <Icon size={24} className="text-green-500 flex-shrink-0" />;
+            case 'retweet': {
+                const Icon = RepeatIcon;
+                if (typeof Icon === 'function') {
+                    return <Icon size={24} className="text-green-500 flex-shrink-0" />;
+                }
+                return <span className="text-2xl">{Icon}</span>;
             }
-            return <span className="text-2xl">{Icon}</span>;
-        }
-        case 'quote': { // 인용 알림 아이콘
-            const Icon = RepeatIcon;
-            if (typeof Icon === 'function') {
-                return <Icon size={24} className="text-purple-500 flex-shrink-0" />;
+            case 'quote': { // 인용 알림 아이콘
+                const Icon = RepeatIcon;
+                if (typeof Icon === 'function') {
+                    return <Icon size={24} className="text-purple-500 flex-shrink-0" />;
+                }
+                return <span className="text-2xl text-purple-500">{Icon}</span>;
             }
-            return <span className="text-2xl text-purple-500">{Icon}</span>;
+            default:
+                return null;
         }
-        default:
-            return null;
-    }
-};
+    };
 
-    if (notification.type === 'quote' && quotePost) {
-        return (
-            <div
-                className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-start space-x-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
-                onClick={() => onThreadSelect(quotePost.id)}
-            >
-                 <div className="w-8 text-right pt-1">{getIcon()}</div>
-                 <div className="flex-grow">
-                    <p className="font-semibold dark:text-white">
-                        <span className="font-normal text-gray-700 dark:text-gray-300">
-                             {getNotificationText()}
-                        </span>
-                    </p>
-                    {}
-                    <div className="mt-2">
-                        <PostItem
-                            post={quotePost}
-                            posts={posts} 
-                            isTimelinePreview={true} 
-                            onThreadSelect={onThreadSelect}
-                            isMainFocus={false}
-                            isPreview={true}
-                        />
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    const handleClick = () => {
+        if (notification.type === 'quote' && quotePost) {
+            onThreadSelect(quotePost.id);
+        } else if (targetPost) {
+            onThreadSelect(targetPost.id);
+        }
+    };
 
-    if (!targetPost || actorProfiles.length === 0) {
+    if (actorProfiles.length === 0 || (notification.type !== 'quote' && !targetPost)) {
         return null;
     }
 
     return (
         <div
             className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-start space-x-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
-            onClick={() => onThreadSelect(targetPost.id)}
+            onClick={handleClick}
         >
             <div className="w-8 text-right pt-1">{getIcon()}</div>
             <div className="flex-grow">
-                <div className="flex mb-2">
-                    {actorProfiles.map((profile, index) => (
-                        <div key={profile.uid || index} className={index > 0 ? "-ml-2" : ""}>
-                            <ProfilePictureDisplay
-                                profile={profile}
-                                sizeClass="w-8 h-8 ring-2 ring-white dark:ring-gray-800"
+                {notification.type === 'quote' && quotePost ? (
+                    <>
+                        <p className="font-semibold dark:text-white">
+                            <span className="font-normal text-gray-700 dark:text-gray-300">
+                                {getNotificationText()}
+                            </span>
+                        </p>
+                        <div className="mt-2">
+                            <PostItem
+                                post={quotePost}
+                                posts={posts}
+                                isTimelinePreview={true}
+                                onThreadSelect={onThreadSelect}
+                                isMainFocus={false}
+                                isPreview={true}
                             />
                         </div>
-                    ))}
-                </div>
-                <p className="font-semibold dark:text-white">
-                    <span className="font-normal text-gray-700 dark:text-gray-300">{getNotificationText()}</span>
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 italic whitespace-pre-wrap line-clamp-2">
-                    {typeof targetPost.content === 'string' && targetPost.content.trim() !== ''
-                        ? `"${targetPost.content}"`
-                        : '(내용이 없거나 사진만 있는 게시물)'
-                    }
-                </p>
+                    </>
+                ) : (
+                    <>
+                        <div className="flex mb-2">
+                            {actorProfiles.map((profile, index) => (
+                                <div key={profile.uid || index} className={index > 0 ? "-ml-2" : ""}>
+                                    <ProfilePictureDisplay
+                                        profile={profile}
+                                        sizeClass="w-8 h-8 ring-2 ring-white dark:ring-gray-800"
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                        <p className="font-semibold dark:text-white">
+                            <span className="font-normal text-gray-700 dark:text-gray-300">{getNotificationText()}</span>
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 italic whitespace-pre-wrap line-clamp-2">
+                            {typeof targetPost.content === 'string' && targetPost.content.trim() !== ''
+                                ? `"${targetPost.content}"`
+                                : '(내용이 없거나 사진만 있는 게시물)'
+                            }
+                        </p>
+                    </>
+                )}
             </div>
         </div>
     );
@@ -2043,7 +2046,7 @@ const App = () => {
         }, [mentionPosts, lastCheckedNotifications]);
 
 
-        const displayItems = useMemo(() => {
+       const displayItems = useMemo(() => {
     if (selectedPostIdForThread) return [];
     
     if (activeView === 'likes') {
@@ -2055,69 +2058,66 @@ const App = () => {
         return posts.filter(p => p.bookmarks?.includes(currentUserId));
     }
 
-         if (activeView === 'notifications') {
-    // 멘션 알림은 기존과 동일하게 처리합니다.
-    const mentionNotifications = posts
-        .filter(p => p.mentions?.includes(currentUserId))
-        .map(p => ({ ...p, type: 'mention' }));
-    
-    // 'like'와 'retweet' 알림을 그룹화합니다.
-    const groupedNotifications = notifications.reduce((acc, notification) => {
-        const { postId, type, actorId, timestamp } = notification;
+    if (activeView === 'notifications') {
+        // 좋아요와 리트윗 알림을 그룹화합니다.
+        const groupedNotifications = notifications
+            .filter(n => n.type === 'like' || n.type === 'retweet')
+            .reduce((acc, notification) => {
+                const { postId, type, actorId, timestamp } = notification;
+                const groupKey = `${postId}_${type}`;
 
-        // 'mention'과 'quote'는 그룹화하지 않으므로 건너뜁니다.
-        if (type === 'mention' || type === 'quote') return acc;
+                if (!acc[groupKey]) {
+                    acc[groupKey] = {
+                        id: groupKey,
+                        type,
+                        postId,
+                        actors: [],
+                        latestTimestamp: new Date(0).getTime()
+                    };
+                }
 
-        const groupKey = `${postId}_${type}`; // 예: "post123_like"
+                if (!acc[groupKey].actors.includes(actorId)) {
+                    acc[groupKey].actors.push(actorId);
+                }
+                const notifTimestamp = timestamp?.getTime ? timestamp.getTime() : new Date(timestamp).getTime();
+                if (notifTimestamp > acc[groupKey].latestTimestamp) {
+                    acc[groupKey].latestTimestamp = notifTimestamp;
+                }
+                return acc;
+            }, {});
+            
+        // 인용 알림을 별도로 추출합니다. (그룹화하지 않음)
+        const quoteNotifications = notifications
+            .filter(n => n.type === 'quote')
+            .map(n => ({
+                ...n,
+                actors: [n.actorId],
+                timestamp: n.timestamp?.getTime ? n.timestamp.getTime() : new Date(n.timestamp).getTime(),
+            }));
 
-        if (!acc[groupKey]) {
-            acc[groupKey] = {
-                id: groupKey, // React key로 사용할 고유 ID
-                type,
-                postId,
-                actors: [], // 알림을 발생시킨 사용자 ID 목록
-                latestTimestamp: new Date(0)
-            };
-        }
-
-        // 중복되지 않게 actorId를 추가합니다.
-        if (!acc[groupKey].actors.includes(actorId)) {
-            acc[groupKey].actors.push(actorId);
-        }
+        // 멘션 알림을 별도로 추출합니다.
+        const mentionNotifications = posts
+            .filter(p => p.mentions?.includes(currentUserId))
+            .map(p => ({
+                ...p,
+                type: 'mention',
+                id: p.id,
+                actors: [p.authorId],
+                timestamp: p.timestamp?.getTime ? p.timestamp.getTime() : new Date(p.timestamp).getTime(),
+            }));
+            
+        // 모든 알림을 합치고 시간순으로 정렬합니다.
+        const combined = [
+            ...Object.values(groupedNotifications).map(g => ({
+                ...g,
+                timestamp: g.latestTimestamp
+            })),
+            ...quoteNotifications,
+            ...mentionNotifications,
+        ];
         
-        // 가장 최신 알림 시간을 기록합니다.
-        if (timestamp > acc[groupKey].latestTimestamp) {
-            acc[groupKey].latestTimestamp = timestamp;
-        }
-
-        return acc;
-    }, {});
-    
-    // 'quote' 알림은 그룹화하지 않고 별도로 가져옵니다.
-    const quoteNotifications = notifications.filter(n => n.type === 'quote').map(n => {
-        // 인용 알림은 단일 actor와 연결되므로, actors 배열을 생성합니다.
-        const post = posts.find(p => p.id === n.postId);
-        return {
-            ...n,
-            actors: [n.actorId],
-            // 인용 트윗 게시글의 작성 시간을 기준으로 정렬하기 위해 timestamp를 사용합니다.
-            timestamp: post?.timestamp || n.timestamp,
-        };
-    });
-
-    // 모든 알림을 병합하고 최신순으로 정렬합니다.
-    const combined = [
-        ...mentionNotifications, 
-        ...Object.values(groupedNotifications),
-        ...quoteNotifications,
-    ];
-    
-    return combined.sort((a, b) => {
-        const timeA = a.latestTimestamp || a.timestamp;
-        const timeB = b.latestTimestamp || b.timestamp;
-        return timeB.getTime() - timeA.getTime(); 
-    });
-}
+        return combined.sort((a, b) => b.timestamp - a.timestamp);
+    }
 
     // 타임라인 뷰 로직 (기존과 동일)
     if (activeView === 'timeline') {
