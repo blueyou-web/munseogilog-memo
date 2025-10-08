@@ -975,29 +975,33 @@ const NotificationItem = ({ notification, posts, allCustomProfiles, onThreadSele
         const [showRetweetMenu, setShowRetweetMenu] = useState(false);
         const hasFlashed = useRef(false);
 
-        const originalPost = posts.find(p => p.id === post.retweetedPostId);
-        const isRetweet = !!post.retweetedPostId;
-        const isSimpleRetweet = isRetweet && !post.content && !post.replyToId;
+         const originalPost = posts.find(p => p.id === post.retweetedPostId);
+    const isRetweet = !!post.retweetedPostId;
+    const isSimpleRetweet = isRetweet && !post.content && !post.replyToId;
 
-        const isAuthor = post.authorId === App.currentUserId;
-        const MessageIcon = MessageSquare;
+    const isAuthor = post.authorId === App.currentUserId;
+    const MessageIcon = MessageSquare;
 
-        const targetPostId = isSimpleRetweet && originalPost ? originalPost.id : post.id;
-        const sourcePostForReactions = isSimpleRetweet && originalPost ? originalPost : post;
+    const targetPostId = isSimpleRetweet && originalPost ? originalPost.id : post.id;
+    const sourcePostForReactions = isSimpleRetweet && originalPost ? originalPost : post;
+    
+    const isLiked = sourcePostForReactions.likes?.includes(App.currentUserId);
+    const isBookmarked = sourcePostForReactions.bookmarks?.includes(App.currentUserId);
 
-        const isLiked = sourcePostForReactions.likes?.includes(App.currentUserId);
-        const isBookmarked = sourcePostForReactions.bookmarks?.includes(App.currentUserId);
+    // ★★★ 기존 retweetsCount 선언 코드를 이 코드로 대체하세요. ★★★
+    const targetPostForRetweets = isSimpleRetweet ? originalPost : post;
+    const retweetsCount = targetPostForRetweets
+        ? posts.filter(p => p.retweetedPostId === targetPostForRetweets.id).length
+        : 0;
 
-        const retweetsCount = posts.filter(p => p.retweetedPostId === post.id).length;
+    const isRetweetedByCurrentUser = posts.some(p =>
+        p.retweetedPostId === post.id &&
+        !p.content &&
+        !p.replyToId &&
+        p.authorId === App.currentUserId
+    );
 
-        const isRetweetedByCurrentUser = posts.some(p =>
-            p.retweetedPostId === post.id &&
-            !p.content &&
-            !p.replyToId &&
-            p.authorId === App.currentUserId
-        );
-
-        const postProfile = isSimpleRetweet && originalPost ? {
+    const postProfile = isSimpleRetweet && originalPost ? {
             name: originalPost.authorName,
             handle: originalPost.authorHandle,
             color: originalPost.authorColor,
