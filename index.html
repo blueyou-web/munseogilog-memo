@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -46,11 +45,11 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, deleteDoc, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, deleteDoc, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         window.firebase = {
             initializeApp, getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut,
-            getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, deleteDoc, updateDoc, getDoc, setDoc
+            getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, deleteDoc, updateDoc, getDoc, setDoc
         };
     </script>
 </head>
@@ -86,22 +85,23 @@
     const X = Lucide.X || '❌';
     const ArrowLeft = Lucide.ArrowLeft || '←';
     const Bell = Lucide.Bell || '🔔';
+    // [다크모드 추가]
     const Sun = Lucide.Sun || '☼';
     const Moon = Lucide.Moon || '☽';
 
-//여기를 수정하세요
     const hardcodedFirebaseConfig = {
-  apiKey: "AIzaSyB3icEr8HkxWY5xV1ZGmRejvYdPy8KyJ_E",
-  authDomain: "tlfgjadyd-9cdc7.firebaseapp.com",
-  databaseURL: "https://tlfgjadyd-9cdc7-default-rtdb.firebaseio.com",
-  projectId: "tlfgjadyd-9cdc7",
-  storageBucket: "tlfgjadyd-9cdc7.firebasestorage.app",
-  messagingSenderId: "302944812833",
-  appId: "1:302944812833:web:6ffce93e9961ad7f36c860"
+  apiKey: "AIzaSyDl27Ha273gOZmW-7TXuf3nI-5_km41lPY",
+  authDomain: "baba-a52ef.firebaseapp.com",
+  databaseURL: "https://baba-a52ef-default-rtdb.firebaseio.com",
+  projectId: "baba-a52ef",
+  storageBucket: "baba-a52ef.firebasestorage.app",
+  messagingSenderId: "948075263139",
+  appId: "1:948075263139:web:356cf855c8b3e68069fb16"
 };
     
     const ACTIVE_USER_STORAGE_KEY = 'miniTwitterActiveUser';
     const LAST_CHECKED_NOTIFICATIONS_KEY = 'miniTwitterLastCheckedNotifications';
+    // [다크모드 추가] 로컬 스토리지 키
     const DARK_MODE_STORAGE_KEY = 'miniTwitterDarkMode';
 
     let firebaseConfig, initialAuthToken, canvasAppId;
@@ -120,30 +120,52 @@
         initialAuthToken = null;
     }
 
-const { initializeApp, getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut,
-        getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, deleteDoc, updateDoc, getDoc, setDoc } = window.firebase || {};
+    const { initializeApp, getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut,
+            getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, deleteDoc, updateDoc, getDoc, setDoc } = window.firebase || {};
+
     const getInitialActiveUser = () => localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
     
-//그룹과 인원추가를 만지고 싶다면 여기를 수정하세요
 const MOCK_GROUPS = [
-    { id: 'group1', name: '에이 팀', icon: 'A' },
-    { id: 'group2', name: '비 팀', icon: 'B' },
-    { id: 'group3', name: '씨 팀', icon: 'C' },
-    { id: 'group4', name: '디 팀', icon: 'D' },
-    { id: 'group5', name: '이 팀', icon: 'E' },
+    { id: 'dev', name: '에이 팀', icon: 'A' },
+    { id: 'design', name: '비 팀', icon: 'B' },
+    { id: 'marketing', name: '씨 팀', icon: 'C' },
+    { id: 'finance', name: '디 팀', icon: 'D' },
+    { id: 'financ', name: '이 팀', icon: 'E' },
 ];
 
 const MOCK_USERS = [
-    { uid: 'user-001', name: '유저 1', handle: 'user1', color: 'bg-gray-500', profile: '1', group: 'group1' },
-    { uid: 'user-002', name: '유저 2', handle: 'user2', color: 'bg-gray-500', profile: '2', group: 'group1' },
-    { uid: 'user-003', name: '유저 3', handle: 'user3', color: 'bg-gray-500', profile: '3', group: 'group2' },
-    { uid: 'user-004', name: '유저 4', handle: 'user4', color: 'bg-gray-500', profile: '4', group: 'group2' },
-    { uid: 'user-005', name: '유저 5', handle: 'user5', color: 'bg-gray-500', profile: '5', group: 'group3' },
-    { uid: 'user-006', name: '유저 6', handle: 'user6', color: 'bg-gray-500', profile: '6', group: 'group3' },
-    { uid: 'user-007', name: '유저 7', handle: 'user7', color: 'bg-gray-500', profile: '7', group: 'group4' },
-    { uid: 'user-008', name: '유저 8', handle: 'user8', color: 'bg-gray-500', profile: '8', group: 'group4' },
-    { uid: 'user-009', name: '유저 9', handle: 'user9', color: 'bg-gray-500', profile: '9', group: 'group5' },
-    { uid: 'user-010', name: '유저 10', handle: 'user10', color: 'bg-gray-500', profile: '10', group: 'group5' },
+    { uid: 'user-001', name: '유저 1', handle: 'user1', color: 'bg-gray-500', profile: '1', group: 'dev' },
+    { uid: 'user-002', name: '유저 2', handle: 'user2', color: 'bg-gray-500', profile: '2', group: 'dev' },
+    { uid: 'user-003', name: '유저 3', handle: 'user3', color: 'bg-gray-500', profile: '3', group: 'dev' },
+    { uid: 'user-004', name: '유저 4', handle: 'user4', color: 'bg-gray-500', profile: '4', group: 'dev' },
+    { uid: 'user-005', name: '유저 5', handle: 'user5', color: 'bg-gray-500', profile: '5', group: 'dev' },
+    { uid: 'user-006', name: '유저 6', handle: 'user6', color: 'bg-gray-500', profile: '6', group: 'dev' },
+    { uid: 'user-007', name: '유저 7', handle: 'user7', color: 'bg-gray-500', profile: '7', group: 'dev' },
+    { uid: 'user-008', name: '유저 8', handle: 'user8', color: 'bg-gray-500', profile: '8', group: 'dev' },
+    { uid: 'user-009', name: '유저 9', handle: 'user9', color: 'bg-gray-500', profile: '9', group: 'dev' },
+    { uid: 'user-010', name: '유저 10', handle: 'user10', color: 'bg-gray-500', profile: '10', group: 'dev' },
+    { uid: 'user-011', name: '유저 11', handle: 'user11', color: 'bg-gray-500', profile: '11', group: 'dev' },
+    { uid: 'user-012', name: '유저 12', handle: 'user12', color: 'bg-gray-500', profile: '12', group: 'dev' },
+    { uid: 'user-013', name: '유저 13', handle: 'user13', color: 'bg-gray-500', profile: '13', group: 'design' },
+    { uid: 'user-014', name: '유저 14', handle: 'user14', color: 'bg-gray-500', profile: '14', group: 'design' },
+    { uid: 'user-015', name: '유저 15', handle: 'user15', color: 'bg-gray-500', profile: '15', group: 'design' },
+    { uid: 'user-016', name: '유저 16', handle: 'user16', color: 'bg-gray-500', profile: '16', group: 'marketing' },
+    { uid: 'user-017', name: '유저 17', handle: 'user17', color: 'bg-gray-500', profile: '17', group: 'marketing' },
+    { uid: 'user-018', name: '유저 18', handle: 'user18', color: 'bg-gray-500', profile: '18', group: 'marketing' },
+    { uid: 'user-019', name: '유저 19', handle: 'user19', color: 'bg-gray-500', profile: '19', group: 'marketing' },
+    { uid: 'user-020', name: '유저 20', handle: 'user20', color: 'bg-gray-500', profile: '20', group: 'marketing' },
+    { uid: 'user-021', name: '유저 21', handle: 'user21', color: 'bg-gray-500', profile: '21', group: 'marketing' },
+    { uid: 'user-022', name: '유저 22', handle: 'user22', color: 'bg-gray-500', profile: '22', group: 'marketing' },
+    { uid: 'user-023', name: '유저 23', handle: 'user23', color: 'bg-gray-500', profile: '23', group: 'finance' },
+    { uid: 'user-024', name: '유저 24', handle: 'user24', color: 'bg-gray-500', profile: '24', group: 'finance' },
+    { uid: 'user-025', name: '유저 25', handle: 'user25', color: 'bg-gray-500', profile: '25', group: 'finance' },
+    { uid: 'user-026', name: '유저 26', handle: 'user26', color: 'bg-gray-500', profile: '26', group: 'finance' },
+    { uid: 'user-027', name: '유저 27', handle: 'user27', color: 'bg-gray-500', profile: '27', group: 'finance' },
+    { uid: 'user-028', name: '유저 28', handle: 'user28', color: 'bg-gray-500', profile: '28', group: 'finance' },
+    { uid: 'user-029', name: '유저 29', handle: 'user29', color: 'bg-gray-500', profile: '29', group: 'finance' },
+    { uid: 'user-030', name: '유저 30', handle: 'user30', color: 'bg-gray-500', profile: '30', group: 'financ' },
+    { uid: 'user-031', name: '유저 31', handle: 'user31', color: 'bg-gray-500', profile: '31', group: 'financ' },
+    { uid: 'user-032', name: '유저 32', handle: 'user32', color: 'bg-gray-500', profile: '32', group: 'financ' },
 ];
     
     const EXAMPLE_IMAGE_URL = 'https://i.imgur.com/PPzkDE7.png';
@@ -168,150 +190,52 @@ const MOCK_USERS = [
         });
     };
 
-const ProfilePictureDisplay = ({ profile, sizeClass = 'w-10 h-10', textSizeClass = 'text-lg', isSmall = false }) => {
-    const safeProfile = profile || {}; 
-    const hasImage = safeProfile.profileImageUrl && safeProfile.profileImageUrl.startsWith('http');
-    
-    const handleImageError = (e, profile) => {
-        e.target.style.display = 'none'; 
-        const parentDiv = e.target.parentElement;
-        const colorClass = (profile.color || 'bg-gray-500').split('-').slice(1, 3).join('-');
-        const colorMap = {
-            'blue-500': '#3b82f6', 'blue-400': '#60a5fa',
-            'pink-500': '#ec4899', 'pink-400': '#f472b6',
-            'indigo-500': '#6366f1', 'indigo-400': '#818cf8',
-            'green-500': '#10b981', 'green-400': '#34d399',
-            'gray-300': '#d1d5db',
-            'gray-500': '#6b7280',
-        };
+    const ProfilePictureDisplay = ({ profile, sizeClass = 'w-10 h-10', textSizeClass = 'text-lg', isSmall = false }) => {
+        const hasImage = profile.profileImageUrl && profile.profileImageUrl.startsWith('http');
         
-        if (isSmall) {
-             parentDiv.classList.add('bg-transparent');
-             parentDiv.innerHTML = `<span class="text-white ${textSizeClass}">${profile.profile || '?'}</span>`;
-             return;
-        }
+        const handleImageError = (e, profile) => {
+            e.target.style.display = 'none'; 
+            const parentDiv = e.target.parentElement;
+            const colorClass = profile.color.split('-').slice(1, 3).join('-');
+            const colorMap = {
+                'blue-500': '#3b82f6', 'blue-400': '#60a5fa',
+                'pink-500': '#ec4899', 'pink-400': '#f472b6',
+                'indigo-500': '#6366f1', 'indigo-400': '#818cf8',
+                'green-500': '#10b981', 'green-400': '#34d399',
+                'gray-300': '#d1d5db',
+                'gray-500': '#6b7280',
+            };
+            
+            if (isSmall) {
+                 parentDiv.classList.add('bg-transparent');
+                 parentDiv.innerHTML = `<span class="text-white ${textSizeClass}">${profile.profile}</span>`;
+                 return;
+            }
 
-        parentDiv.style.backgroundColor = colorMap[colorClass] || '#ccc'; 
-        parentDiv.classList.remove('overflow-hidden');
-        parentDiv.innerHTML = `<span class="${textSizeClass}">${profile.profile || '?'}</span>`; 
-    };
-
-    const defaultStyleClass = isSmall ? 'bg-transparent' : (safeProfile.color || 'bg-gray-500'); 
-    
-    return (
-        <div 
-            className={`rounded-full flex items-center justify-center flex-shrink-0 ${sizeClass} ${hasImage ? 'overflow-hidden bg-transparent' : defaultStyleClass}`}
-        >
-            {hasImage ? (
-                <img 
-                    src={safeProfile.profileImageUrl} 
-                    alt={`${safeProfile.name || 'Unknown'}'s profile`} 
-                    className="w-full h-full object-cover"
-                    onError={(e) => handleImageError(e, safeProfile)}
-                />
-            ) : (
-                <span className={`${textSizeClass} ${isSmall ? 'text-white' : ''}`}>{safeProfile.profile || '?'}</span>
-            )}
-        </div>
-    );
-};
-
-const NotificationItem = ({ notification, posts, allCustomProfiles, onThreadSelect }) => {
-    const actorProfiles = notification.actors.map(actorId => {
-        const actorProfileData = MOCK_USERS.find(u => u.uid === actorId) || {};
-        const customActorProfile = allCustomProfiles[actorId] || {};
-        return {
-            ...actorProfileData,
-            name: customActorProfile.name || actorProfileData.name || '사용자',
-            handle: customActorProfile.handle || actorProfileData.handle,
-            profileImageUrl: customActorProfile.profileImageUrl || '',
-            color: actorProfileData.color,
-            profile: actorProfileData.profile
+            parentDiv.style.backgroundColor = colorMap[colorClass] || '#ccc'; 
+            parentDiv.classList.remove('overflow-hidden');
+            parentDiv.innerHTML = `<span class="${textSizeClass}">${profile.profile}</span>`; 
         };
-    }).slice(0, 5); // 프로필 사진은 최대 5개까지만 표시
 
-    // 관련 게시물을 찾습니다.
-    const targetPost = posts.find(p => p.id === notification.postId);
-    if (!targetPost || actorProfiles.length === 0) {
-        return null;
-    }
-
-    // ✨ "A님 외 O명이..." 와 같은 텍스트를 생성합니다. ✨
-    const getNotificationText = () => {
-        const firstActorName = actorProfiles[0].name;
-        const othersCount = notification.actors.length - 1;
-        let text = '';
-
-        if (othersCount > 0) {
-            text = `${firstActorName}님 외 ${othersCount}명이 회원님의 게시물을`;
-        } else {
-            text = `${firstActorName}님이 회원님의 게시물을`;
-        }
-
-        switch (notification.type) {
-            case 'like': return `${text} 좋아합니다.`;
-            case 'retweet': return `${text} 리트윗했습니다.`;
-            default: return '님의 알림';
-        }
-    };
-    
-    const getIcon = () => {
-    switch (notification.type) {
-        case 'like': {
-            const Icon = Heart;
-            // Icon 변수가 함수(컴포넌트)인지 확인
-            if (typeof Icon === 'function') {
-                return <Icon size={24} className="text-red-500 flex-shrink-0" />;
-            }
-            // 함수가 아니면(문자열 이모지이면) 일반 span 태그로 렌더링
-            return <span className="text-2xl">{Icon}</span>;
-        }
-        case 'retweet': {
-            const Icon = RepeatIcon;
-            // Icon 변수가 함수(컴포넌트)인지 확인
-            if (typeof Icon === 'function') {
-                return <Icon size={24} className="text-green-500 flex-shrink-0" />;
-            }
-            // 함수가 아니면(문자열 이모지이면) 일반 span 태그로 렌더링
-            return <span className="text-2xl">{Icon}</span>;
-        }
-        default:
-            return null;
-    }
-};
-
-    return (
-        <div
-            className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-start space-x-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
-            onClick={() => onThreadSelect(targetPost.id)}
-        >
-            <div className="w-8 text-right pt-1">{getIcon()}</div>
-            <div className="flex-grow">
-                {/* ✨ 겹쳐진 프로필 사진들을 표시합니다. ✨ */}
-                <div className="flex mb-2">
-                    {actorProfiles.map((profile, index) => (
-                        <div key={profile.uid || index} className={index > 0 ? "-ml-2" : ""}>
-                            <ProfilePictureDisplay
-                                profile={profile}
-                                sizeClass="w-8 h-8 ring-2 ring-white dark:ring-gray-800"
-                            />
-                        </div>
-                    ))}
-                </div>
-                <p className="font-semibold dark:text-white">
-                    {/* 생성된 텍스트를 사용합니다. */}
-                    <span className="font-normal text-gray-700 dark:text-gray-300">{getNotificationText()}</span>
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 italic whitespace-pre-wrap line-clamp-2">
-                    {typeof targetPost.content === 'string' && targetPost.content.trim() !== ''
-                        ? `"${targetPost.content}"`
-                        : '(내용이 없거나 사진만 있는 게시물)'
-                    }
-                </p>
+        const defaultStyleClass = isSmall ? 'bg-transparent' : profile.color;
+        
+        return (
+            <div 
+                className={`rounded-full flex items-center justify-center flex-shrink-0 ${sizeClass} ${hasImage ? 'overflow-hidden bg-transparent' : defaultStyleClass}`}
+            >
+                {hasImage ? (
+                    <img 
+                        src={profile.profileImageUrl} 
+                        alt={`${profile.name} profile`} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => handleImageError(e, profile)}
+                    />
+                ) : (
+                    <span className={`${textSizeClass} ${isSmall ? 'text-white' : ''}`}>{profile.profile}</span>
+                )}
             </div>
-        </div>
-    );
-};
+        );
+    };
 
     // [2. 프로필 비밀번호] - 비밀번호 입력 모달
     const PasswordModal = ({ user, onConfirm, onCancel }) => {
@@ -998,22 +922,13 @@ const NotificationItem = ({ notification, posts, allCustomProfiles, onThreadSele
             }
 
             if (isMainFocus || isPreview) return; 
+
             const isActionElement = e.target.tagName === 'BUTTON' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT' || e.target.tagName === 'A' || e.target.closest('button') || e.target.closest('.retweet-menu');
 
-    if (!isActionElement) {
-        const isSimpleRetweet = isRetweet && !post.content && !post.replyToId;
-  
-        const targetThreadId = (isSimpleRetweet && originalPost) ? originalPost.id : post.id;
-        
-        onThreadSelect(targetThreadId);
-    }
-
             if (!isActionElement) {
-    const isSimpleRetweet = isRetweet && !post.content && !post.replyToId;
-    const targetThreadId = (isSimpleRetweet && originalPost) ? originalPost.id : post.id;
-    
-    onThreadSelect(targetThreadId);
-}
+                const targetThreadId = (isRetweet && originalPost) ? originalPost.id : post.id;
+                onThreadSelect(targetThreadId);
+            }
         };
 
         const handleRetweetMenuAction = (e, actionType) => {
@@ -1459,7 +1374,7 @@ const App = () => {
         const [postToRetweet, setPostToRetweet] = useState(null); 
         const [replyToPost, setReplyToPost] = useState(null); 
         const [lastCheckedNotifications, setLastCheckedNotifications] = useState(null);
-    const [notifications, setNotifications] = useState([]);
+        // [1. 다크 모드 추가] - 상태 관리
         const [isDarkMode, setIsDarkMode] = useState(() => {
             const stored = localStorage.getItem(DARK_MODE_STORAGE_KEY);
             if (stored !== null) return stored === 'true';
@@ -1738,26 +1653,6 @@ const App = () => {
             });
             return () => unsubscribe();
         }, [db, isLoading]); 
-        
-        useEffect(() => {
-    if (!db || isLoading || !currentUserId) return;
-
-    const notificationsColRef = collection(db, `/artifacts/${canvasAppId}/public/data/notifications`);
-        const q = query(notificationsColRef, where("recipientId", "==", currentUserId), orderBy("timestamp", "desc"));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const fetchedNotifications = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            timestamp: doc.data().timestamp?.toDate() || new Date(),
-        }));
-        setNotifications(fetchedNotifications);
-    }, (error) => {
-        console.error("알림 데이터 불러오기 오류:", error);
-    });
-
-    return () => unsubscribe();
-}, [db, isLoading, currentUserId]);
 
         const handleReplyClick = useCallback((post) => {
             if (App.currentUserId) {
@@ -1829,46 +1724,32 @@ const App = () => {
                  return console.error("액션 대상 원본 게시물을 찾을 수 없습니다.");
             }
             const postToQuote = posts.find(p => p.id === targetOriginalId);
-if (actionType === 'QT') {
-        if (!postToQuote) return console.error("인용할 원본 게시물을 찾을 수 없습니다.");
-        setPostToRetweet({ post: postToQuote, action: 'QT' });
-    } else if (actionType === 'RT') {
-        const existingSimpleRT = posts.find(p => 
-            p.retweetedPostId === targetOriginalId && 
-            !p.content && 
-            !p.replyToId && 
-            p.authorId === currentUserId
-        );
+
+            if (actionType === 'QT') {
+                if (!postToQuote) return console.error("인용할 원본 게시물을 찾을 수 없습니다.");
+                setPostToRetweet({ post: postToQuote, action: 'QT' });
+            } else if (actionType === 'RT') {
+                const existingSimpleRT = posts.find(p => 
+                    p.retweetedPostId === targetOriginalId && 
+                    !p.content && 
+                    !p.replyToId && 
+                    p.authorId === currentUserId
+                );
+                
+                if (existingSimpleRT) {
+                    try {
+                        const docRef = doc(db, `/artifacts/${canvasAppId}/public/data/posts`, existingSimpleRT.id);
+                        await deleteDoc(docRef);
+                    } catch (e) {
+                        console.error("언리트윗 실패:", e);
+                    }
+                } else {
+                    if (!postToQuote) return console.error("리트윗할 원본 게시물을 찾을 수 없습니다.");
+                    await handlePost("", null, targetOriginalId, null);
+                }
+            }
+        }, [currentUserId, posts, handlePost, db]);
         
-        if (existingSimpleRT) {
-            // 리트윗 취소 로직 (기존과 동일)
-            try {
-                const docRef = doc(db, `/artifacts/${canvasAppId}/public/data/posts`, existingSimpleRT.id);
-                await deleteDoc(docRef);
-            } catch (e) {
-                console.error("언리트윗 실패:", e);
-            }
-        } else {
-            // 리트윗 생성 로직
-            if (!postToQuote) return console.error("리트윗할 원본 게시물을 찾을 수 없습니다.");
-            
-            // 알림 생성
-            if (postToQuote.authorId !== currentUserId) {
-                const notificationsColRef = collection(db, `/artifacts/${canvasAppId}/public/data/notifications`);
-                await addDoc(notificationsColRef, {
-                    type: 'retweet',
-                    recipientId: postToQuote.authorId,
-                    actorId: currentUserId,
-                    postId: targetOriginalId,
-                    timestamp: serverTimestamp(),
-                    read: false
-                });
-            }
-            // 리트윗 게시물 생성
-            await handlePost("", null, targetOriginalId, null); 
-        }
-    }
-}, [currentUserId, posts, handlePost, db]);
         const submitQuoteTweet = useCallback(async (content, originalPostId, imageUrl) => {
             if (content.trim() === "" && imageUrl.trim() === "") return;
             await handlePost(content, null, originalPostId, imageUrl);
@@ -1876,43 +1757,25 @@ if (actionType === 'QT') {
         }, [handlePost]);
 
         const toggleReaction = useCallback(async (postId, fieldName) => {
-    if (!db || !currentUserId || !getDoc) return;
-    try {
-        const docRef = doc(db, `/artifacts/${canvasAppId}/public/data/posts`, postId);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-            const postData = docSnap.data();
-            const currentUsers = postData[fieldName] || [];
-            let newUsers;
-            
-            const postAuthorId = postData.authorId;
-            const isAdding = !currentUsers.includes(currentUserId);
-
-            if (isAdding) {
-                newUsers = [...currentUsers, currentUserId];
-            } else {
-                newUsers = currentUsers.filter(uid => uid !== currentUserId);
+            if (!db || !currentUserId || !getDoc) return;
+            try {
+                const docRef = doc(db, `/artifacts/${canvasAppId}/public/data/posts`, postId);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const postData = docSnap.data();
+                    const currentUsers = postData[fieldName] || [];
+                    let newUsers;
+                    if (currentUsers.includes(currentUserId)) {
+                        newUsers = currentUsers.filter(uid => uid !== currentUserId);
+                    } else {
+                        newUsers = [...currentUsers, currentUserId];
+                    }
+                    await updateDoc(docRef, { [fieldName]: newUsers });
+                }
+            } catch (e) {
+                console.error(`${fieldName} 토글 실패:`, e);
             }
-            await updateDoc(docRef, { [fieldName]: newUsers });
-
-            // --- ✨ 알림 생성 로직 추가 시작 ✨ ---
-            if (fieldName === 'likes' && isAdding && postAuthorId !== currentUserId) {
-                const notificationsColRef = collection(db, `/artifacts/${canvasAppId}/public/data/notifications`);
-                await addDoc(notificationsColRef, {
-                    type: 'like', // 알림 종류
-                    recipientId: postAuthorId, // 알림을 받을 사람 (게시물 작성자)
-                    actorId: currentUserId, // 행동을 한 사람 (좋아요를 누른 사람)
-                    postId: postId, // 관련 게시물 ID
-                    timestamp: serverTimestamp(),
-                    read: false // 읽음 상태
-                });
-            }
-            // --- ✨ 알림 생성 로직 추가 끝 ✨ ---
-        }
-    } catch (e) {
-        console.error(`${fieldName} 토글 실패:`, e);
-    }
-}, [db, currentUserId, getDoc]);
+        }, [db, currentUserId, getDoc]);
 
         const handleToggleLike = useCallback((postId) => {
             toggleReaction(postId, 'likes');
@@ -1980,111 +1843,93 @@ if (actionType === 'QT') {
         }, [mentionPosts, lastCheckedNotifications]);
 
 
+        // [!!!] 여기가 '나뭇가지' 로직의 핵심입니다. (수정됨)
         const displayItems = useMemo(() => {
-    if (selectedPostIdForThread) return [];
-    
-    if (activeView === 'likes') {
-        if (!currentUserId) return [];
-        return posts.filter(p => p.likes?.includes(currentUserId));
-    }
-    if (activeView === 'bookmarks') {
-        if (!currentUserId) return [];
-        return posts.filter(p => p.bookmarks?.includes(currentUserId));
-    }
+            if (selectedPostIdForThread) return [];
 
-    if (activeView === 'notifications') {
-    // 멘션 알림은 그대로 유지합니다.
-    const mentionNotifications = posts
-        .filter(p => p.mentions?.includes(currentUserId))
-        .map(p => ({ ...p, type: 'mention' }));
+            if (activeView === 'likes') {
+                if (!currentUserId) return [];
+                return posts.filter(p => p.likes?.includes(currentUserId));
+            }
+            if (activeView === 'bookmarks') {
+                if (!currentUserId) return [];
+                return posts.filter(p => p.bookmarks?.includes(currentUserId));
+            }
+            if (activeView === 'notifications') {
+                return mentionPosts;
+            }
 
-    // 'like'와 'retweet' 알림을 그룹화합니다.
-    const groupedNotifications = notifications.reduce((acc, notification) => {
-        const { postId, type, actorId, timestamp } = notification;
+            if (activeView === 'timeline') {
+                const postsById = new Map(posts.map(p => [p.id, p]));
+                const timelineActivities = [];
+                const processedBranches = new Set(); // 처리된 '가지'를 추적합니다. (첫 번째 댓글 ID 기준)
 
-        // 멘션은 그룹화하지 않으므로 건너뜁니다.
-        if (type === 'mention') return acc;
+                // 모든 게시물을 최신순으로 순회합니다.
+                for (const latestPostInActivity of posts) {
+                    
+                    // 단순 리트윗을 먼저 처리합니다.
+                    // 단순 리트윗을 먼저 처리합니다.
+                    if (latestPostInActivity.retweetedPostId && !latestPostInActivity.content && !latestPostInActivity.replyToId) {
+                        if (!processedBranches.has(latestPostInActivity.id)) { // 중복 방지를 위해 자신의 ID를 사용
+                            timelineActivities.push({ type: 'retweet', activity: latestPostInActivity, id: latestPostInActivity.id });
+                            processedBranches.add(latestPostInActivity.id);
+                        }
+                        continue;
+                    }
+                    
+                    // 최신 게시물부터 루트까지의 대화 경로를 추적합니다.
+                    const path = [];
+                    let current = latestPostInActivity;
+                    while (current) {
+                        path.unshift(current);
+                        current = postsById.get(current.replyToId);
+                    }
 
-        const groupKey = `${postId}_${type}`; // 예: "post123_like"
+                    const rootPost = path[0];
+                    if (!rootPost) continue;
 
-        if (!acc[groupKey]) {
-            acc[groupKey] = {
-                id: groupKey, // React key로 사용할 고유 ID
-                type,
-                postId,
-                actors: [], // 알림을 발생시킨 사용자 ID 목록
-                latestTimestamp: new Date(0)
-            };
-        }
+                    // '가지'는 루트 게시물에 달린 첫 번째 댓글로 식별합니다.
+                    // 경로에 루트만 있다면, 가지 ID는 루트의 ID가 됩니다.
+                    const branchIdentifier = path.length > 1 ? path[1].id : rootPost.id;
 
-        // 중복되지 않게 actorId를 추가합니다.
-        if (!acc[groupKey].actors.includes(actorId)) {
-            acc[groupKey].actors.push(actorId);
-        }
-        
-        // 가장 최신 알림 시간을 기록합니다.
-        if (timestamp > acc[groupKey].latestTimestamp) {
-            acc[groupKey].latestTimestamp = timestamp;
-        }
+                    // 이 가지에서 더 최신 활동을 이미 처리했다면 건너킵니다.
+                    if (processedBranches.has(branchIdentifier)) {
+                        continue;
+                    }
 
-        return acc;
-    }, {});
-    
-    // 그룹화된 객체를 배열로 변환하고, 멘션 알림과 합칩니다.
-    const combined = [
-        ...mentionNotifications, 
-        ...Object.values(groupedNotifications)
-    ];
-    
-    // 최종적으로 최신순으로 정렬합니다.
-    return combined.sort((a, b) => {
-        const timeA = a.latestTimestamp || a.timestamp;
-        const timeB = b.latestTimestamp || b.timestamp;
-        // 👇 바로 이 부분입니다! 'a.getTime()'이 아니라 'timeA.getTime()' 입니다.
-        return timeB.getTime() - timeA.getTime(); 
-    });
-}
-
-    // 타임라인 뷰 로직 (기존과 동일)
-    if (activeView === 'timeline') {
-        // ... (기존 타임라인 로직은 그대로 유지) ...
-        const postsById = new Map(posts.map(p => [p.id, p]));
-        const timelineActivities = [];
-        const processedBranches = new Set();
-        for (const latestPostInActivity of posts) {
-            if (latestPostInActivity.retweetedPostId && !latestPostInActivity.content && !latestPostInActivity.replyToId) {
-                if (!processedBranches.has(latestPostInActivity.id)) {
-                    timelineActivities.push({ type: 'retweet', activity: latestPostInActivity, id: latestPostInActivity.id });
-                    processedBranches.add(latestPostInActivity.id);
+                    // 경로 구조에 따라 타임라인 아이템을 구성합니다.
+                    if (path.length === 1) { // 케이스 1: 댓글이 없는 원본 게시물
+                        timelineActivities.push({
+                            type: 'root_only',
+                            rootPost: rootPost,
+                            id: rootPost.id
+                        });
+                    } else if (path.length === 2) { // 케이스 2: 원본 게시물에 달린 단일 댓글
+                        timelineActivities.push({
+                            type: 'single_reply',
+                            rootPost: rootPost,
+                            reply: path[1], // 유일한 댓글
+                            id: branchIdentifier
+                        });
+                    } else { // 케이스 3: 중첩된 대화 (3단 구조로 표시)
+                        timelineActivities.push({
+                            type: 'branch',
+                            rootPost: rootPost,
+                            parentReply: path[path.length - 2], // 최신 댓글의 바로 위 부모
+                            latestReply: latestPostInActivity,
+                            id: branchIdentifier
+                        });
+                    }
+                    
+                    // 이 가지는 처리되었음을 표시하여 중복으로 타임라인에 나타나지 않도록 합니다.
+                    processedBranches.add(branchIdentifier);
                 }
-                continue;
+                
+                return timelineActivities;
             }
-            const path = [];
-            let current = latestPostInActivity;
-            while (current) {
-                path.unshift(current);
-                current = postsById.get(current.replyToId);
-            }
-            const rootPost = path[0];
-            if (!rootPost) continue;
-            const branchIdentifier = path.length > 1 ? path[1].id : rootPost.id;
-            if (processedBranches.has(branchIdentifier)) {
-                continue;
-            }
-            if (path.length === 1) {
-                timelineActivities.push({ type: 'root_only', rootPost: rootPost, id: rootPost.id });
-            } else if (path.length === 2) {
-                timelineActivities.push({ type: 'single_reply', rootPost: rootPost, reply: path[1], id: branchIdentifier });
-            } else {
-                timelineActivities.push({ type: 'branch', rootPost: rootPost, parentReply: path[path.length - 2], latestReply: latestPostInActivity, id: branchIdentifier });
-            }
-            processedBranches.add(branchIdentifier);
-        }
-        return timelineActivities;
-    }
-
-    return [];
-}, [posts, currentUserId, activeView, selectedPostIdForThread, notifications]);
+            
+            return [];
+        }, [posts, currentUserId, activeView, selectedPostIdForThread, mentionPosts]);
         
         const threadData = useMemo(() => {
             if (!selectedPostIdForThread) return null;
@@ -2145,9 +1990,9 @@ if (actionType === 'QT') {
         };
 
         return (
-            <div className="min-h-screen bg-gray-100 dark:bg-gray-900 font-sans antialiased pt-[70px]"> 
+            <div className="min-h-screen bg-gray-100 dark:bg-gray-900 font-sans antialiased pt-[57px]"> 
                 
-                <div className="fixed top-0 left-0 right-0 z-20 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+                <div className="fixed top-0 left-0 right-0 z-20 bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
                     <div className="w-full max-w-xl md:w-[576px] mx-auto p-3 flex justify-between items-center"> 
                         <button
                             onClick={toggleProfileSelector}
@@ -2503,35 +2348,14 @@ if (actionType === 'QT') {
                                     return null;
                                 })
                         ) : (
-                            displayItems.map(item => {
-        // ✨ 이 부분이 핵심입니다! ✨
-        if (activeView === 'notifications') {
-            // 알림 탭일 경우, item의 type을 확인합니다.
-            if (item.type === 'mention') {
-                // type이 'mention'이면 기존 PostItem을 사용합니다.
-                return <PostItem key={item.id} {...allPostProps} post={item} />;
-            } else {
-                // type이 'like' 또는 'retweet'이면 새로 만든 NotificationItem을 사용합니다.
-                return (
-                    <NotificationItem
-                        key={item.id}
-                        notification={item}
-                        posts={posts}
-                        allCustomProfiles={allCustomProfiles}
-                        onThreadSelect={handleThreadSelect}
-                    />
-                );
-            }
-        }
-        return (
-            <PostItem
-                key={item.id}
-                {...allPostProps}
-                post={item}
-            />
-        )
-    })
-)}
+                            displayItems.map(post => (
+                                <PostItem 
+                                    key={post.id} 
+                                    {...allPostProps}
+                                    post={post}
+                                />
+                            ))
+                        )}
                     </main>
                 </div>
                 
@@ -2590,7 +2414,3 @@ if (actionType === 'QT') {
 
 </body>
 </html>
-
-
-
-
